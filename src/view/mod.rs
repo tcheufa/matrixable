@@ -1,12 +1,11 @@
 //! This module provides a growable and generic matrix that implements the `Matrix` trait.
 
 use crate::*;
-use crate::traits::{ Matrix, Swap };
+use crate::traits::{ Matrix, MatrixMut, SwapDimensions };
 
-/// A growable and generic matrix in row major order.
+/// A growable and generic matrix.
 ///
-/// When new elements are added matrix number of rows are updated automatically when required.
-///
+/// 
 /// TODO:
 /// - Test methods that have not been
 /// - Look for a better matrix multiplication optimization
@@ -17,6 +16,7 @@ use crate::traits::{ Matrix, Swap };
 /// - Review Extend trait implementation design.                                            :OK:
 /// - Review the design decision of not allowing empty matrices
 /// - Try an `into_diagos()` method to convert a matrix into a its diagonals.               :OK:
+/// - Implement the `Growable` trait for MatrixView;
 
 #[derive(Clone, Default, Debug)]
 pub struct MatrixView<T> {
@@ -78,13 +78,9 @@ impl<T> MatrixView<T> {
     
     fn into_vec(self) -> Vec<T> {  self.d  }
     
-    pub fn swap_dimensions(&mut self) {
-       let rows  = self.num_rows();
-       std::mem::replace(&mut self.c, rows);
-    }
-    
     pub fn data(&self) -> &Vec<T> { &self.d }
-    pub fn data_mut(&mut self) -> &mut Vec<T> { &mut self.d }
+    
+    pub fn data_mut(&mut self) -> &mut [T] { &mut self.d }
     
     #[inline(always)]
     pub fn is_empty(&self) -> bool { self.d.is_empty() }
@@ -117,7 +113,8 @@ impl<T> Matrix for MatrixView<T> {
         }
         None
     }
-
+}
+impl<T> MatrixMut for MatrixView<T> {
     fn get_mut(&mut self, i: usize, j: usize) -> Option<&mut T> {
         if i < self.num_rows() && j < self.c {
             let n = self.index_from((i, j));
@@ -130,6 +127,12 @@ impl<T> Matrix for MatrixView<T> {
         let a = self.index_from(a);
         let b = self.index_from(b);
         self.d.swap(a, b); // Data must have the method swap.
+    }
+}
+
+impl<T> SwapDimensions for MatrixView<T> {
+    fn swap_dimensions(&mut self) {
+        self.c = self.num_rows();
     }
 }
 

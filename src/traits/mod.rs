@@ -2,16 +2,14 @@ use crate::iterators::*;
 use crate::access::*;
 
 pub mod req;
-pub mod ops;
 
 pub use req::*;
 
-/// This trait provides methods and tools for manipulating matrix-like structures.
+/// This trait provides methods and tools for accessing data in matrix-like structures.
 pub trait Matrix
 {
     /// The type of the elements of the matrix.
     type Element;
-    
     
     // Required methods
     
@@ -24,10 +22,6 @@ pub trait Matrix
     /// Returns a reference to an element inside the matrix, at the intersection of the `i`-th row and the `j`-th column.
     fn get(&self, row: usize, column: usize) -> Option<&Self::Element>;
 
-    /// Returns a mutable reference to a value inside the matrix, at the intersection of the `i`-th row and the `j`-th column.
-    fn get_mut(&mut self, row: usize, column: usize) -> Option<&mut Self::Element>;
-
-    
     
     // Provided methods.
     
@@ -49,24 +43,15 @@ pub trait Matrix
     }
     
     
-    /// Returns a mutable reference to an element, without doing
-    /// bounds checking.
-    ///
-    /// For a safe alternative see [`get_mut`].
-    ///
-    /// # Safety
-    ///
-    /// Calling this method with an out-of-bounds index is *[undefined behavior]*
-    /// even if the resulting reference is not used.
-    ///
-    /// You can think of this like `.get_mut(row_index, column_index).unwrap_unchecked()`.
-    ///
-    /// [`get_mut`]: crate::traits::Matrix::get_mut
-    
-    unsafe fn get_mut_unchecked(&mut self, row: usize, column: usize) -> &mut Self::Element {
-        self.get_mut(row, column).unwrap_unchecked()
+    fn get_nth(&self, n: usize) -> Option<&Self::Element> {
+        let (i, j) = self.indexes_from(n);
+        self.get(i, j)
     }
     
+    unsafe fn get_nth_unchecked(&self, n: usize) -> &Self::Element {
+        let (i, j) = self.indexes_from(n);
+        self.get_unchecked(i, j)
+    }
     
     /// Returns the size of the matrix ie. `.num_rows()` * `.num_cols()`.
     fn size(&self) -> usize { self.num_rows() * self.num_cols() }
@@ -140,31 +125,13 @@ pub trait Matrix
             Some((n / self.num_cols(), n % self.num_cols()))
         }
     }
-
-    /// Changes the value of an element at the intersection of the `i`-th row and the `j`-th column of the matrix.
-    ///
-    /// # Error
-    /// An error is returned if any of those indexes are out of bounds.
-    fn set(&mut self, (i, j): (usize, usize), val: Self::Element) -> Result<(), &'static str> {
-        match self.get_mut(i, j) {
-            Some(target) => {
-                *target = val;
-                Ok(())
-            }
-            None => Err("Cannot access element from indexes."),
-        }
-    }    
+ 
     
     /// Returns an iterator over the elements of the matrix.
     ///
     /// Iteration follows the *Row Major Order*.
     fn iter(&self) -> Iter<'_, Self> where Self: Sized { Iter::new(self) }
-    
-    /// Returns an iterator that allows modifying each element.
-    ///
-    /// Iteration follows the *Row Major Order*.
-    fn iter_mut(&mut self) -> IterMut<'_, Self> where Self: Sized { IterMut::new(self) }
-    
+
     
     /// Returns an iterator over the elements of the `i`-th row.
     ///
@@ -177,20 +144,6 @@ pub trait Matrix
         }
         else {
             Some(Row::new(self, i))
-        }
-    }
-
-    /// Returns an iterator that allows modifying each element of the `i`-th row  .
-    ///
-    /// None is returned if `i >= number of rows`.
-    fn row_mut(&mut self, i: usize) -> Option<RowMut<'_, Self>> 
-    where Self: Sized 
-    {
-        if i >= self.num_rows() {
-            None
-        }
-        else {
-            Some(RowMut::new(self, i))
         }
     }
 
@@ -207,21 +160,7 @@ pub trait Matrix
             Some(Column::new(self, j))
         }
     }
-
-    /// Returns an iterator over that allows modifying each element of the `j`-th column.
-    ///
-    /// None is returned if `j >= number of columns`.
-    fn column_mut(&mut self, j: usize) -> Option<ColumnMut<'_, Self>>
-    where Self: Sized
-    {
-        if j >= self.num_cols() {
-            None
-        }
-        else {
-            Some(ColumnMut::new(self, j))
-        }
-    }   
-
+  
     fn diag(&self, n: usize) ->  Option<Diag<'_, Self>>
     where Self: Sized
     {
@@ -233,22 +172,6 @@ pub trait Matrix
         }
     }
     
-    
-    /// Returns an iterator over that allows modifying each element of the `n`-th diagonal.
-    ///
-    /// None is returned if `n >= number of diagonals`.
-    fn diag_mut(&mut self, n: usize) ->  Option<DiagMut<'_, Self>>
-    where Self: Sized
-    {
-        if n >= self.num_diags() {
-            None
-        }
-        else {
-            Some(DiagMut::new(self, n))
-        }
-    }
-    
-    
     /// Returns an iterator which gives the current subscripts of the current element as well as its value.
     fn enumerate(&self) -> Enumerator<Iter<'_, Self>>
     where Self: Sized
@@ -257,34 +180,14 @@ pub trait Matrix
         Enumerator::new(self.iter(), cols)
     }
 
-    /// `.enumerate()` with mutable access to each element.
-    fn enumerate_mut(&mut self) -> Enumerator<IterMut<'_, Self>>
-    where Self: Sized
-    {
-        let cols = self.num_cols();
-        Enumerator::new(self.iter_mut(), cols)
-    }
-
-
     /// Returns an iterator over the rows with immutable access to elements.
     fn rows(&self) -> Rows<Self> where Self: Sized { 
         Rows::from(self)
     }
 
-    /// Returns an iterator over the rows with mutable access to elements.
-    fn rows_mut(&mut self) -> RowsMut<Self> where Self: Sized {
-        RowsMut::from(self) 
-    }
-
-
     /// Returns an iterator over the columns with immutable access to elements.
     fn columns(&self) -> Columns<Self> where Self: Sized { 
         Columns::from(self)
-    }
-
-    /// Returns an iterator over the columns of the matrix with mutable access to elements.
-    fn columns_mut (&mut self) -> ColumnsMut<Self> where Self: Sized {
-        ColumnsMut::from(self) 
     }
     
     /// Returns an iterator over the diagonals with immutable access to elements.
@@ -292,55 +195,18 @@ pub trait Matrix
         Diags::from(self) 
     }
 
-    /// Returns an iterator over the diagonals with mutable access to elements.
-    fn diagonals_mut (&mut self) -> DiagsMut<Self> where Self: Sized {
-        DiagsMut::from(self) 
-    }
-
-    /// Creates an iterator over rows from the matrix.
-    fn into_rows(self) -> IntoRows<Self::Element> 
-    where Self: Sized + Into<Vec<Self::Element>> { 
-        IntoRows::from(self) 
-    }
-
-    /// Creates an iterator over columns from the matrix.
-    fn into_cols(self) -> IntoCols<Self::Element>
-    where Self: Sized + Into<Vec<Self::Element>> {
-        IntoCols::from(self) 
-    }
-
-    /// Creates an iterator over diagonals from the matrix.
-    fn into_diags(self) -> IntoDiags<Self::Element>
-    where Self: Sized + Into<Vec<Self::Element>> {
-        IntoDiags::from(self) 
-    }
-
-    /// Creates from matrix a matrix where access to elements is conditioned by `access`.
-    fn into_access(self, access: fn(&Self, usize, usize)-> Option<(usize, usize)>) -> Access<Self>
+    /// Creates from matrix a matrix where access to elements is defined by `access` function.
+    fn access(&self, access: fn(&Self, usize, usize)-> Option<(usize, usize)>) -> Access<'_, Self>
     where Self: Sized {
         Access::new(self, access)
     }
     
-    
-    /// Wraps the matrix into one where access is defined by a matrix of indexes.
-    fn into_access_map(self, mapping: crate::view::MatrixView<usize>) -> AccessMap<Self>  
-    where Self: Sized {
-        AccessMap { mapping, target: self } 
-    }
-    /*
-    fn transform(self, t: TransformStrategy) -> Box<dyn Transformation>
-    where Self: Sized + 'static  {
-        match t {
-            TransformStrategy::Identity => Box::new(Identity(self)),
-            TransformStrategy::Transposition => Box::new(Transposition(self)),
-            TransformStrategy::RotationR => Box::new(RotationR(self)),
-            TransformStrategy::RotationL => Box::new(RotationL(self)),
-            TransformStrategy::FlipH => Box::new(FlipH(self)),
-            TransformStrategy::FlipV => Box::new(FlipV(self)),
-            TransformStrategy::CentralSymmetry => Box::new(CentralSymmetry(self)),
-            TransformStrategy::Map(mapping) => Box::new(Map { mapping, target: self })
-        }
-    }*/
+//     /// Wraps the matrix into one where access is defined by a matrix of indexes.
+//     fn into_access_map(self, mapping: crate::view::MatrixView<usize>) -> AccessMap<Self>  
+//     where Self: Sized {
+//         AccessMap { mapping, target: self } 
+//     }
+//     
      
 //     /// Returns a submatrix
 //     fn submatrix(self, edge1:(usize, usize), edge2: (usize, usize)) -> Self {
@@ -350,75 +216,11 @@ pub trait Matrix
 //         self.enumerate()
 //             .skip(skip)
 //             .take_while(|(i, j, _)| (i, j) == edge2);
-//         todo!()
-//         
+//         todo!()   
 //     }
 //   
-/*    /// Performs an in-place transposition of the matrix.
-    fn transposed(&mut self) -> &mut Self 
-    where Self::Data: Swap<usize>
-    {
-        // element [0] and element[size-1] does not need to be transposed
-        // so we reduce the array into all the elements between indices 0 and size-1
-        // that is `1..=size-2`
-        let limit = self.num_rows() * self.num_cols()  -  1;
-        let r = self.num_rows();
 
-        let mut hash = std::collections::HashSet::new();
 
-        let mut dest: usize;
-        for n in 1..limit {
-            dest = (n * r) % limit;
-
-            if hash.contains(&n) {
-                continue;
-            }
-
-            hash.insert(dest);
-
-            self.data_mut().swap(n, dest);  // Data again must implement swap
-        }
-
-        self.swap_dimensions();
-        self
-    }
-*/
-
-    /// Swaps to elements in the matrix.
-    ///
-    /// If a equals to b, it’s guaranteed that elements won’t change value.
-    ///
-    /// # Arguments
-    ///
-    /// a - The index of the first element
-    /// b - The index of the second element
-    ///
-    /// # Panics
-    ///
-    /// Panics if a or b are out of bounds.
-    fn swap(&mut self, a:(usize, usize), b:(usize, usize)) {
-        if a == b { return }
-        let a: *mut Self::Element = self.get_mut(a.0, a.1).unwrap();
-        let b: *mut Self::Element = self.get_mut(b.0, b.1).unwrap();
-        unsafe { std::mem::swap(&mut *a, &mut *b) };
-    }
-
-    /// After calling this function, `.num_rows()` becomes `.num_cols()` and vice-versa.
-    fn swap_dimensions(&mut self) {
-    
-        println!("Before permutation: rows {}, cols {}", self.num_rows(), self.num_cols());
-        /*let mut a: *mut fn(&Self)->usize = Self::num_rows;
-        let mut b: *mut fn(&Self)->usize = Self::num_cols;
-        */
-        let a = <self as Matrix>::num_rows as usize;
-        let b = <self as Matrix>::num_cols as usize;
-        println!("addr fnrow {a},, addr fncol{b}");
-        let c = 1;
-        unsafe {std::mem::swap(&mut *(a as *mut fn(&Self)->usize), &mut *(b as *mut fn(&Self)->usize))};
-        
-        println!("After permutation: rows {}, cols {}",  self.num_rows(), self.num_cols());
-    }
-    
     /// Checks if the matrix is a square matrix (a matrix with equal number of rows and columns).
     fn is_square(&self) -> bool {
         self.num_rows() == self.num_cols()
@@ -470,7 +272,6 @@ pub trait Matrix
         self.num_rows() <= self.num_cols()
     }
     
-    
     /// Checks if the matrix is vertical (number of rows of the matrix is greater than number of columns).
     fn is_vertical(&self) -> bool {
         self.num_rows() >= self.num_cols()
@@ -510,7 +311,6 @@ pub trait Matrix
         (true, Some(zero)) 
     }     
 
-    
     /// Returns a boolean indicating if matrix is a ~square diagonal matrix~ having the same elements on its diagonal, along with that element and the element considered as zero.
     ///
     /// This method can be useful for finding an identity matrix.
@@ -554,4 +354,170 @@ pub trait Matrix
         (true, Some(one), Some(zero)) 
     }
 }
+ 
+/// This trait adds mutable access and some additional methods to Matrix implementors.
+pub trait MatrixMut: Matrix {
+    // Required
+    
+    /// Returns a mutable reference to a value inside the matrix, at the intersection of the `i`-th row and the `j`-th column.
+    fn get_mut(&mut self, row: usize, column: usize) -> Option<&mut Self::Element>;
+    
+    
+    // Provided
+    
+    /// Returns a mutable reference to an element, without doing
+    /// bounds checking.
+    ///
+    /// For a safe alternative see [`get_mut`].
+    ///
+    /// # Safety
+    ///
+    /// Calling this method with an out-of-bounds index is *[undefined behavior]*
+    /// even if the resulting reference is not used.
+    ///
+    /// You can think of this like `.get_mut(row_index, column_index).unwrap_unchecked()`.
+    ///
+    /// [`get_mut`]: crate::traits::MatrixMut::get_mut
+    unsafe fn get_mut_unchecked(&mut self, row: usize, column: usize) -> &mut Self::Element {
+        self.get_mut(row, column).unwrap_unchecked()
+    }
+        
+    fn get_nth_mut(&mut self, n: usize) -> Option<&mut Self::Element> {
+        let (i, j) = self.indexes_from(n);
+        self.get_mut(i, j)
+    }
+    
+    unsafe fn get_nth_mut_unchecked(&mut self, n: usize) -> &mut Self::Element {
+        let (i, j) = self.indexes_from(n);
+        self.get_mut_unchecked(i, j)
+    }
+    
+    /// Changes the value of an element at the intersection of the `i`-th row and the `j`-th column of the matrix.
+    ///
+    /// # Error
+    /// An error is returned if any of those indexes are out of bounds.
+    fn set(&mut self, (i, j): (usize, usize), val: Self::Element) -> Result<(), &'static str> {
+        match self.get_mut(i, j) {
+            Some(target) => {
+                *target = val;
+                Ok(())
+            }
+            None => Err("Cannot access element from indexes."),
+        }
+    }   
+        
+    /// Swaps two elements in the matrix identified by their subscripts.
+    ///
+    /// If a equals to b, it’s guaranteed that elements won’t change value.
+    ///
+    /// # Arguments
+    ///
+    /// a - The index of the first element
+    /// b - The index of the second element
+    ///
+    /// # Panics
+    ///
+    /// Panics if a or b are out of bounds.
+    fn swap(&mut self, a:(usize, usize), b:(usize, usize)) {
+        if a == b { return }
+        let a: *mut Self::Element = self.get_mut(a.0, a.1).unwrap();
+        let b: *mut Self::Element = self.get_mut(b.0, b.1).unwrap();
+        unsafe { std::mem::swap(&mut *a, &mut *b) };
+    }
 
+    /// Swaps two elements in the matrix identified by their linear position following the *Row Major Order*.
+    ///
+    /// If a equals to b, it’s guaranteed that elements won’t change value.
+    ///
+    /// # Arguments
+    ///
+    /// a - The index of the first element
+    /// b - The index of the second element
+    ///
+    /// # Panics
+    ///
+    /// Panics if a or b are out of bounds.
+    fn swapn(&mut self, a: usize, b: usize) {
+        if a == b { return }
+        let a: *mut Self::Element = self.get_nth_mut(a).unwrap();
+        let b: *mut Self::Element = self.get_nth_mut(b).unwrap();
+        unsafe { std::mem::swap(&mut *a, &mut *b) };
+    }
+    
+    /// Returns an iterator that allows modifying each element.
+    ///
+    /// Iteration follows the *Row Major Order*.
+    fn iter_mut(&mut self) -> IterMut<'_, Self> where Self: Sized { IterMut::new(self) }
+    
+    /// Returns an iterator that allows modifying each element of the `i`-th row  .
+    ///
+    /// None is returned if `i >= number of rows`.
+    fn row_mut(&mut self, i: usize) -> Option<RowMut<'_, Self>> 
+    where Self: Sized 
+    {
+        if i >= self.num_rows() {
+            None
+        }
+        else {
+            Some(RowMut::new(self, i))
+        }
+    }
+    
+    /// Returns an iterator over that allows modifying each element of the `j`-th column.
+    ///
+    /// None is returned if `j >= number of columns`.
+    fn column_mut(&mut self, j: usize) -> Option<ColumnMut<'_, Self>>
+    where Self: Sized
+    {
+        if j >= self.num_cols() {
+            None
+        }
+        else {
+            Some(ColumnMut::new(self, j))
+        }
+    } 
+
+    /// Returns an iterator over that allows modifying each element of the `n`-th diagonal.
+    ///
+    /// None is returned if `n >= number of diagonals`.
+    fn diag_mut(&mut self, n: usize) ->  Option<DiagMut<'_, Self>>
+    where Self: Sized
+    {
+        if n >= self.num_diags() {
+            None
+        }
+        else {
+            Some(DiagMut::new(self, n))
+        }
+    }
+    
+    /// Creates from matrix a matrix where access to elements is conditioned by `access`.
+    fn access_mut(&mut self, access: fn(&Self, usize, usize)-> Option<(usize, usize)>) -> AccessMut<'_, Self>
+    where Self: Sized {
+        AccessMut::new(self, access)
+    }
+    
+    /// `.enumerate()` with mutable access to each element.
+    fn enumerate_mut(&mut self) -> Enumerator<IterMut<'_, Self>>
+    where Self: Sized
+    {
+        let cols = self.num_cols();
+        Enumerator::new(self.iter_mut(), cols)
+    }
+    
+    /// Returns an iterator over the rows with mutable access to elements.
+    fn rows_mut(&mut self) -> RowsMut<Self> where Self: Sized {
+        RowsMut::from(self) 
+    }
+
+    /// Returns an iterator over the columns of the matrix with mutable access to elements.
+    fn columns_mut (&mut self) -> ColumnsMut<Self> where Self: Sized {
+        ColumnsMut::from(self) 
+    }
+    
+    /// Returns an iterator over the diagonals with mutable access to elements.
+    fn diagonals_mut (&mut self) -> DiagsMut<Self> where Self: Sized {
+        DiagsMut::from(self) 
+    }
+    
+}
