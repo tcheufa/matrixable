@@ -1,78 +1,48 @@
 //! Helpers for access and transformation of matrix.
-
+//!
 //! TODO
 //! - Create Strategy: ShiftFrontUnordered, ShiftBackUnordered, SubMatrix
 //! - Discuss about the use of a closure instead of a fn pointer for access function type
 //! - Create a Strategy version using a const Mapping i.e. `<const Mapping: M>`
 
-use crate::traits::Matrix;
+use crate::traits::{Matrix, MatrixMut, SwapDimensions};
 use crate::view::MatrixView;
 use crate::traits::TransformStrategy;
 
 /// This Strategy does nothing...
 pub struct Identity;
 
-/// A Strategy that performs matrix transposition.
-pub struct Transposition;
+/// Performs matrix transposition.
+pub struct Transpose;
 
-/// A Strategy that performs a reverse clockwise rotation of the matrix.
-pub struct RotationL;
+/// Performs a counter-clockwise rotation.
+pub struct RotateL;
 
-/// A Strategy that performs a clockwise rotation of the matrix.
-pub struct RotationR;
+/// Performs a clockwise rotation.
+pub struct RotateR;
 
-/// A Strategy that performs a horizontal flip of the matrix.
+/// that performs a horizontal flip of a matrix.
 pub struct FlipH;
 
-/// A Strategy that performs a vertical flip of the matrix.
+/// A Strategy that performs a vertical flip of a matrix.
 pub struct FlipV;
 
-/// A Strategy that performs a symmetry of elements by the center of the matrix.
-pub struct CentralSymmetry;
+/// Reverses a matrix by performing a symmetry of elements by the center of that matrix.
+pub struct Reverse;
 
-/// A Strategy that performs a wrapped shift of elements from right to left.
+/// A Strategy that performs a wrapped shift of elements of a matrix from right to left.
 pub struct ShiftFront<const N: usize>;
 
 /// A Strategy that performs a wrapped shift of elements from left to right.
 pub struct ShiftBack<const N: usize>;
 
-/// Access to a matrix are conditioned by elements of another matrix.
-pub struct AccessMap<M: Matrix, Map: Matrix = MatrixView<usize>> { 
-    pub(crate) mapping: Map,
-    pub(crate) target: M
-} 
+pub struct SubMatrix<const START:(usize, usize), const END: Option<(usize, usize)>>;
+// /// Access to a matrix are conditioned by elements of another matrix.
+// pub struct AccessMap<M: Matrix, Map: Matrix = MatrixView<usize>> { 
+//     pub(crate) mapping: Map,
+//     pub(crate) target: M
+// } 
 
-
-
-/// Matrix Wrapper which provides access to a matrix by following a certain access method.
-pub struct Access<M: Matrix>{ 
-    m: M,
-    access: fn(&M, usize, usize) -> Option<(usize, usize)> 
-}
-impl<M: Matrix> Access<M> {
-    pub(crate) fn new(m: M, access: fn(&M, usize, usize) -> Option<(usize, usize)>) -> Self {
-        Self { m, access }
-    }
-    pub(crate) fn release(self) -> M { self.m }
-}
-
-impl<M: Matrix> Matrix for Access<M> {
-    type Element = <M as Matrix>::Element;
-    
-    fn num_rows(&self) -> usize { self.m.num_cols() }
-
-    fn num_cols(&self) -> usize { self.m.num_rows() }
-
-    fn get(&self, row: usize, column: usize) -> Option<&Self::Element> { 
-        let (i, j) = (self.access)(&self.m, row, column)?;
-        self.m.get(i, j) 
-    }
-
-    fn get_mut(&mut self, row: usize, column: usize) -> Option<&mut Self::Element> {
-        let (i, j) = (self.access)(&self.m, row, column)?;
-        self.m.get_mut(i, j)
-    }
-}
 
 // pub struct SubMatrix { start: usize, end: usize}
 // pub struct CoordXY; Apparently same Transposition
@@ -83,15 +53,16 @@ impl<M: Matrix> TransformStrategy<M> for Identity {
     fn access(_m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((i, j))
     }
-    fn transform(m: M) -> M { m }
+    fn out_of(m: M) -> M { m }
 }
 
-impl<M: Matrix> TransformStrategy<M> for Transposition {
+impl<M: MatrixMut + SwapDimensions> TransformStrategy<M> for Transpose {
 //    fn copy_into(&self) -> M where &M::Element: Clone { }
     fn access(_m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((j, i))
     }
-    fn transform(mut m: M) -> M { 
+    
+    fn out_of(mut m: M) -> M { 
         if m.is_square() {
             //much more simpler
             let dim = m.num_rows(); // or m.num_cols()
@@ -107,35 +78,43 @@ impl<M: Matrix> TransformStrategy<M> for Transposition {
             // so we reduce the array into all the elements between indices 0 and size-1
             // that is `1..=size-2`
             let r = m.num_rows();
-            let limit = r * m.num_cols()  -  1;
+            let limit = m.size()  -  1;
 
-            let mut hash = std::collections::HashSet::new();
-
-            let mut dest: usize;
-            let mut a;
-            let mut b;
+            let mut toreplace;
+            let mut next ;
+            let mut cycle_begin;
+        
+            let mut moved: std::collections::HashSet<usize> = std::collections::HashSet::new();
             
-            for n in 1..limit {
-                if hash.contains(&n) {
-                    continue;
+//             moved.insert(0);
+//             moved.insert(limit);
+
+            let mut i = 1;
+            while i < limit {
+                cycle_begin = i;
+                toreplace = i;
+                loop {
+                    next = (i * r) % limit;
+                    m.swapn(toreplace, next);
+                    moved.insert(i);
+                    
+                    i = next;
+                    
+                    if i == cycle_begin {
+                        break
+                    }
                 }
                 
-                dest = (n * r) % limit;
-
-                hash.insert(dest);
-                
-                a = m.indexes_from(n);
-                b = m.indexes_from(dest);
-                m.swap(a, b);
-            }
-
+                i = 1;
+                while i < limit && moved.contains(&i) { i += 1 }
+            } 
             m.swap_dimensions();
             m
         }
     }
 }
 
-impl<M: Matrix> TransformStrategy<M> for RotationL {
+impl<M: MatrixMut + SwapDimensions> TransformStrategy<M> for RotateL {
 //    fn copy_into(&self) -> M where &M::Element: Clone { }
     fn access(m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
@@ -143,13 +122,13 @@ impl<M: Matrix> TransformStrategy<M> for RotationL {
             i
         ))
     }
-    fn transform(m: M) -> M { 
-        FlipV::transform(Transposition::transform(m))
+    fn out_of(m: M) -> M { 
+        FlipV::out_of(Transpose::out_of(m))
     }
 }
 
 
-impl<M: Matrix> TransformStrategy<M> for RotationR {
+impl<M: MatrixMut + SwapDimensions> TransformStrategy<M> for RotateR {
 //    fn copy_into(&self) -> M where &M::Element: Clone { }
     fn access(m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
@@ -157,13 +136,13 @@ impl<M: Matrix> TransformStrategy<M> for RotationR {
             m.num_cols().checked_sub(i)?.checked_sub(1)?
         ))
     }
-    fn transform(m: M) -> M {
-        FlipH::transform(Transposition::transform(m))
+    fn out_of(m: M) -> M {
+        FlipH::out_of(Transpose::out_of(m))
     }
 }
 
 
-impl<M: Matrix> TransformStrategy<M> for FlipH {
+impl<M: MatrixMut> TransformStrategy<M> for FlipH {
 //    fn copy_into(&self) -> M where &M::Element: Clone { }
     fn access(m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
@@ -172,22 +151,20 @@ impl<M: Matrix> TransformStrategy<M> for FlipH {
         ))
     }
 
-    fn transform(mut m: M) -> M { 
+    fn out_of(mut m: M) -> M { 
         let cols = m.num_cols();
         let rows = m.num_rows();
         // no need to permute the middle row if number of rows is odd.
         for i in 0..rows {
             for j in 0..(cols / 2) {
-                let a: *mut _ = m.get_mut(i, j).unwrap();
-                let b: *mut _ = m.get_mut(i, cols - j - 1).unwrap();
-                unsafe { std::mem::swap(&mut *a, &mut *b) };
+                m.swap((i, j), (i, cols - j - 1));
             }
         }
         m
     }
 }
 
-impl<M: Matrix> TransformStrategy<M> for FlipV {
+impl<M: MatrixMut> TransformStrategy<M> for FlipV {
 //    fn copy_into(&self) -> M where &M::Element: Clone { }
     fn access(m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
@@ -196,7 +173,7 @@ impl<M: Matrix> TransformStrategy<M> for FlipV {
         ))
     }
 
-    fn transform(mut m: M) -> M { 
+    fn out_of(mut m: M) -> M { 
         let cols = m.num_cols();
         let rows = m.num_rows();
         // no need to permute the middle row if number of rows is odd.
@@ -209,7 +186,7 @@ impl<M: Matrix> TransformStrategy<M> for FlipV {
     }
 }
 
-impl<M: Matrix> TransformStrategy<M> for CentralSymmetry {
+impl<M: MatrixMut> TransformStrategy<M> for Reverse {
 //    fn copy_into(&self) -> M where &M::Element: Clone { }
     fn access(m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
@@ -218,20 +195,17 @@ impl<M: Matrix> TransformStrategy<M> for CentralSymmetry {
         ))
     }
 
-    fn transform(mut m: M) -> M { 
-        let cols = m.num_cols();
-        let rows = m.num_rows();
-        // no need to permute the middle row if number of rows is odd.
-        for i in 0..(rows.div_ceil(2) - 1) {
-            for j in 0..(cols.div_ceil(2) - 1) {
-                m.swap((i, j), (rows - i - 1, cols - j - 1));
-            }
+    fn out_of(mut m: M) -> M { 
+        let len = m.size();
+        for i in 0..(len/2) {
+            m.swapn(i, len - i - 1);
         }
         m
     }
 }
 
-impl<M: Matrix, const N: usize> TransformStrategy<M> for ShiftBack<N> {
+
+impl<M: MatrixMut, const N: usize> TransformStrategy<M> for ShiftBack<N> {
 //    fn copy_into(&self) -> M where &M::Element: Clone {}
     fn access(m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         let mut n = m.index_from((i, j));
@@ -242,19 +216,17 @@ impl<M: Matrix, const N: usize> TransformStrategy<M> for ShiftBack<N> {
         Some(m.indexes_from(n))
     }
     
-    fn transform(mut m: M) -> M { 
+    fn out_of(mut m: M) -> M { 
         let len = m.size();
         let shift = N % len;
         for i in 0..(len - shift) {
-            let a = m.indexes_from(i);
-            let b = m.indexes_from(i + shift);
-            m.swap(a, b);
+            m.swapn(i, i + shift);
         }
         m
     }
 }
 
-impl<M: Matrix, const N: usize> TransformStrategy<M> for ShiftFront<N> {
+impl<M: MatrixMut, const N: usize> TransformStrategy<M> for ShiftFront<N> {
 //    fn copy_into(&self) -> M where &M::Element: Clone {}
     fn access(m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         let mut n = m.index_from((i, j));
@@ -267,26 +239,95 @@ impl<M: Matrix, const N: usize> TransformStrategy<M> for ShiftFront<N> {
         }
         Some(m.indexes_from(n))
     }
-    fn transform(mut m: M) -> M { 
+    
+    fn out_of(m: M) -> M {
         let len = m.size();
         let shift = N % len;
         
-        let mut a;
-        let mut b;
-        let mid = N / 2;
-        //let mid = ((len - 1) + (len - N))  /  2; 
-//         println!("{mid}");
-//         // Reorder the group to be shifted from lower to higher
-//         for i in 0..N {
-//             a = m.indexes_from(len - i - N);
-//             b = m.indexes_from(mid - i );
-//             m.swap(a, b);
-//         }
-        for i in (shift..len).rev() {
-            a = m.indexes_from(i);
-            b = m.indexes_from(i - shift);
-            m.swap(a, b);
+        if shift == 0 { return m }
+        
+        let mut rev = Reverse::out_of(m);
+        
+        for i in 0..(shift / 2) {
+            rev.swapn(i, shift - i - 1);
         }
-        m
+        
+        let len = len + shift;
+        for i in shift..(len / 2) {
+            rev.swapn(i, len - i - 1);
+        }
+        rev
+    }
+}
+
+impl<const START: (usize, usize), const END: Option<(usize, usize)>, M: Matrix>
+    TransformStrategy<M> for SubMatrix<START, END> {
+    fn access(m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
+        let idx = START + (i, j);
+        if idx > END? {
+            None
+        }
+        else {
+            Some(idx)
+        }
+    }
+    
+    fn out_of(m: M) -> M { m }
+}
+
+/// Matrix Wrapper which provides immutable access to a matrix by following a certain access method.
+#[derive(Clone)]
+pub struct Access<'a, M: Matrix>{
+    m: &'a M,
+    access: fn(&M, usize, usize) -> Option<(usize, usize)> 
+}
+
+/// Matrix Wrapper which provides mutable matrix access to a matrix by following a certain access method.
+pub struct AccessMut<'a, M: Matrix>{
+    m: &'a mut M,
+    access: fn(&M, usize, usize) -> Option<(usize, usize)> 
+}
+
+
+impl<'a, M: Matrix> Access<'a, M> {
+    pub(crate) fn new(m: &'a M, access: fn(&M, usize, usize) -> Option<(usize, usize)>) -> Self {
+        Self { m, access }
+    }
+}
+impl<'a, M: Matrix> AccessMut<'a, M> {
+    pub(crate) fn new(m: &'a mut M, access: fn(&M, usize, usize) -> Option<(usize, usize)>) -> Self {
+        Self { m, access }
+    }
+}
+
+impl<'a, M: Matrix> Matrix for Access<'a, M> {
+    type Element = <M as Matrix>::Element;
+    
+    fn num_rows(&self) -> usize { self.m.num_cols() }
+
+    fn num_cols(&self) -> usize { self.m.num_rows() }
+
+    fn get(&self, row: usize, column: usize) -> Option<&Self::Element> { 
+        let (i, j) = (self.access)(&self.m, row, column)?;
+        self.m.get(i, j) 
+    }
+}
+
+impl<'a, M: MatrixMut> Matrix for AccessMut<'a, M> {
+    type Element = M::Element;
+    
+    fn num_rows(&self) -> usize { self.m.num_cols() }
+
+    fn num_cols(&self) -> usize { self.m.num_rows() }
+
+    fn get(&self, row: usize, column: usize) -> Option<&Self::Element> { 
+        let (i, j) = (self.access)(&self.m, row, column)?;
+        self.m.get(i, j) 
+    }
+}
+impl<'a, M: MatrixMut> MatrixMut for AccessMut<'a, M> {
+    fn get_mut(&mut self, row: usize, column: usize) -> Option<&mut Self::Element> { 
+        let (i, j) = (self.access)(&self.m, row, column)?;
+        self.m.get_mut(i, j) 
     }
 }
