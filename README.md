@@ -1,6 +1,6 @@
 # matrixable
 A crate providing utilities for matrix manipulation.
-See **[this]**(https://docs.rs/matrixable/0.1.0/matrixable/) documentation for more information
+See [**this**](https://docs.rs/matrixable/0.1.0/matrixable/) documentation for more information
 
 ## License
 
