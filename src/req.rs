@@ -1,31 +1,31 @@
-//! Traits required for performing operations on `Matrix` structures are all packed here.
+//! Traits required for performing operations on `MatrixExt` structures are all packed here.
 
-use crate::{ Matrix, MatrixMut };
+use crate::{ MatrixExt, MatrixMutExt };
 
 /// Provides a method for exchanging the dimensions of a matrix.
 ///
 /// This trait is intended for some matrix transformations.
-pub trait SwapsDimensions: MatrixMut {
+pub trait SwapsDimensions: MatrixMutExt {
     /// After calling this function, `.num_rows()` must return value of `.num_cols()` and vice-versa.
     fn swap_dimensions(&mut self);
 }
 
 
-/// Create a `Matrix` from an iterator. 
-pub trait MatrixFromIter<A> {
+/// Create a `MatrixExt` from an iterator. 
+pub trait MatrixExtFromIter<A> {
     fn from_iter<T>(into_iter: T, columns: usize) -> Self
         where T: IntoIterator<Item = A>;
 }
 
 
 /// A trait for in-place modification of matrices.
-pub trait InPlace<M: Matrix>: Sized {
+pub trait InPlace<M: MatrixExt>: Sized {
     fn in_place(&self, m: &mut M);
 }
 
 
 /// A Strategy trait for matrix transformation.
-pub trait TransformStrategy<M: Matrix> {
+pub trait TransformStrategy<M: MatrixExt> {
     type Output;
     // By chosing to consume the matrix in order to obtain its transformation,
     // we allow using either an in-place modification of the matrix or the creation 
@@ -34,7 +34,7 @@ pub trait TransformStrategy<M: Matrix> {
 }
 
 /// A Strategy trait for access to matrix elements.
-pub trait AccessStrategy<M: Matrix> {
+pub trait AccessStrategy<M: MatrixExt> {
     /// Gives the location (if it exists) of the element in a matrix that 
     /// should match the indexes (subscripts) provided according to the access strategy.
     ///

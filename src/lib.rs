@@ -1,8 +1,8 @@
-//! This library provides a trait that makes a struct behave like a matrix.
+//! This library provides traits and structs that will extend the capacities of a matrix-like struct.
 //!
-//! A matrix implementing [`Matrix`] is by default in *[`Row Major Order`]*, but you can change it using transpose access, at almost no cost. 
+//! A matrix implementing [`MatrixExt`] is by default in *[`Row Major Order`]*, but you can still change it using transpose access.
 //!
-//! This crate provides also an extension for the standard 2D array `[[T; N]; M]` using the traits available.
+//! This crate provides also an extension for the standard 2D array `[[T; N]; M]`.
 //!
 //! [`Row Major Order`]: https://en.m.wikipedia.org/wiki/Row-_and_column-major_order
 
@@ -13,17 +13,17 @@ pub mod strategies;
 
 mod impls;
 
-pub fn print_rows_debug<M: Matrix> (p: &M) where <M as Matrix>::Element: std::fmt::Debug {
+pub fn print_rows_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
     println!("Rows"); 
     p.rows().for_each(|row| println!("{:?}", row.collect::<Vec<_>>()))
 }
 
-pub fn print_columns_debug<M: Matrix> (p: &M) where <M as Matrix>::Element: std::fmt::Debug {
+pub fn print_columns_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
     println!("Columns");
     p.cols().for_each(|col| println!("{:?}", col.collect::<Vec<_>>()))
 }
 
-pub fn print_diagonals_debug<M: Matrix> (p: &M) where <M as Matrix>::Element: std::fmt::Debug {
+pub fn print_diagonals_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
     println!("Diagonals");
     p.diags().for_each(|col| println!("{:?}", col.collect::<Vec<_>>()))
 }
@@ -36,8 +36,8 @@ use req::*;
 /// This trait provides methods and tools for accessing data in matrix-like structures.
 ///
 /// This trait allows only immutable access to elements of a matrix.
-/// For a mutable implementation see [`MatrixMut`]
-pub trait Matrix
+/// For a mutable implementation see [`MatrixMutExt`]
+pub trait MatrixExt
 {
     /// The type of the elements of the matrix.
     type Element;
@@ -47,7 +47,7 @@ pub trait Matrix
     /// Gets the number of rows of the matrix.
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     /// 
     /// let a = [[1, 2, 3]];
     /// assert_eq!(a.num_rows(), 1);
@@ -66,7 +66,7 @@ pub trait Matrix
     /// Gets the number of columns of the matrix.
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     /// 
     /// let a = [[1, 2, 3]];
     /// assert_eq!(a.num_cols(), 3);
@@ -85,7 +85,7 @@ pub trait Matrix
     /// Returns a reference to an element inside the matrix, at the intersection of the `i`-th row and the `j`-th column.
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     /// 
     /// let v = [[10, 40, 30]];
     ///
@@ -110,7 +110,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let x = &[[1, 2, 4]];
     ///
@@ -118,7 +118,7 @@ pub trait Matrix
     ///     assert_eq!(x.get_unchecked(0, 1), &2);
     /// }
     /// ```
-    /// [`get`]: crate::Matrix::get
+    /// [`get`]: crate::MatrixExt::get
     unsafe fn get_unchecked(&self, row: usize, column: usize) -> &Self::Element {
         self.get(row, column).unwrap_unchecked()
     }
@@ -127,7 +127,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let v = [[10, 40, 30]];
     ///
@@ -152,7 +152,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let x = &[[1, 2, 4]];
     ///
@@ -160,7 +160,7 @@ pub trait Matrix
     ///     assert_eq!(x.get_nth_unchecked(1), &2);
     /// }
     /// ```
-    /// [`get_nth`]: crate::Matrix::get_nth
+    /// [`get_nth`]: crate::MatrixExt::get_nth
     unsafe fn get_nth_unchecked(&self, n: usize) -> &Self::Element {
         let (i, j) = self.subscripts_from(n);
         self.get_unchecked(i, j)
@@ -169,7 +169,7 @@ pub trait Matrix
     /// Returns the size of the matrix
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     /// 
     /// assert_eq!(5, [[1, 2, 3, 4, 5]].size());
     /// assert_eq!(6, [[1, 2], [3, 4], [5, 6]].size());
@@ -180,7 +180,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [[1, 1, 1], [2, 2, 2]];
     ///
@@ -192,7 +192,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [
     ///     [3, 4, 5],
@@ -216,7 +216,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     /// 
     /// let m = [ 
     ///     [(0,0), (0,1)],
@@ -237,7 +237,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [ 
     ///     [0, 1],
@@ -263,7 +263,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [ 
     ///     [0, 1],
@@ -294,7 +294,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [ 
     ///     [0, 1],
@@ -328,7 +328,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [ 
     ///     [0, 1],
@@ -358,7 +358,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [ 
     ///     [0, 1],
@@ -388,7 +388,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let x = &[
     ///      [1, 2],
@@ -411,7 +411,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = &[[1, 2], [3, 4], [5, 6]];
     ///
@@ -440,7 +440,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = &[[1, 2], [3, 4], [5, 6]];
     ///
@@ -469,7 +469,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let mut m = &[
     ///     [1, 4, 6],
@@ -497,7 +497,7 @@ pub trait Matrix
     //
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let mut m = &[
     ///     [1, 4, 6],
@@ -520,7 +520,7 @@ pub trait Matrix
     
     /// Returns an iterator which gives the current subscripts of the current element as well as its value.
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = &[[1, 2], [3, 4], [5, 6]];
     /// let mut en = m.enumerate();
@@ -542,7 +542,7 @@ pub trait Matrix
 
     /// Returns an iterator over the rows with immutable access to elements.
     ///```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let mut m = [[1, 2], [3, 4], [5, 6]];
     /// 
@@ -559,7 +559,7 @@ pub trait Matrix
 
     /// Returns an iterator over the columns with immutable access to elements.
     /// ```rust    
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let mut m = [[1, 2], [3, 4], [5, 6]];
     /// 
@@ -576,7 +576,7 @@ pub trait Matrix
     /// Returns an iterator over the diagonals with immutable access to elements.
     /// Examples
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [
     ///     [0, 1, 2],
@@ -630,7 +630,7 @@ pub trait Matrix
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     /// use matrixable::strategies::ShiftFront;
     ///
     /// let m = [[0, 1], [2, 3]];
@@ -641,11 +641,11 @@ pub trait Matrix
     /// assert_eq!(Some(&3), access.get(1, 0));
     /// assert_eq!(Some(&0), access.get(1, 1));
     /// ```
-    /// This method returns an `Access` struct that implements `Matrix`.
+    /// This method returns an `Access` struct that implements `MatrixExt`.
     /// So by repeating this method on that struct you can chain access 
     /// and obtain a more complex access.
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     /// use matrixable::strategies::{ ShiftFront, FlipH, Transpose};
     ///
     /// let m = [[0, 1], [2, 3]]; 
@@ -676,7 +676,7 @@ pub trait Matrix
     
     /// Checks if the matrix is empty.
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// assert!(![[0]].is_empty());
     /// assert!(![[0], [0]].is_empty());
@@ -696,7 +696,7 @@ pub trait Matrix
 
     /// Checks if the matrix is a square matrix (a matrix with equal number of rows and columns).
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// // singleton
     /// assert!([[1]].is_square());
@@ -730,7 +730,7 @@ pub trait Matrix
     
     /// Checks if the matrix has one dimension (number of columns is `1` or number of rows is `1`)
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// assert_eq!(true, [[0]].is_one_dimension());
     /// assert_eq!(true, [[0, 0]].is_one_dimension());
@@ -753,7 +753,7 @@ pub trait Matrix
     /// Checks if the matrix is symmetric i.e. it does not change when transposed.
     /// 
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// assert!([[0]].is_symmetric());
     /// assert!([[1, 0, 0], [0, 1, 0], [0, 0, 1]].is_symmetric());
@@ -808,7 +808,7 @@ pub trait Matrix
     /// 
     /// # Example
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m1: [[i8; 3]; 3] = [
     ///     [ 0, -1, -2 ],
@@ -844,7 +844,7 @@ pub trait Matrix
     ///
     /// # Examples
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// assert!([[0]].is_singleton());
     /// assert!(![[0],[0]].is_singleton());
@@ -867,7 +867,7 @@ pub trait Matrix
     ///
     /// # Examples
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// assert!([[0]].is_horizontal());
     /// assert!([[0,0]].is_horizontal());
@@ -890,7 +890,7 @@ pub trait Matrix
     ///
     /// # Examples
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// assert!([[0]].is_vertical());
     /// assert!([[0],[0]].is_vertical());
@@ -913,7 +913,7 @@ pub trait Matrix
     ///
     /// # Examples
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m = [
     ///     [1, 0, 0],
@@ -964,7 +964,7 @@ pub trait Matrix
     ///
     /// # Examples 
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     ///
     /// let m1 = [
     ///     [0, 0, 0],
@@ -1039,7 +1039,7 @@ pub trait Matrix
     ///
     /// # Examples 
     /// ```rust
-    /// use matrixable::Matrix;
+    /// use matrixable::MatrixExt;
     /// 
     /// let mut m = [
     ///     [0, 0, 0],
@@ -1077,8 +1077,8 @@ pub trait Matrix
     }
 }
  
-/// This trait adds mutable access and some additional methods to [`Matrix`] implementors.
-pub trait MatrixMut: Matrix {
+/// This trait adds mutable access and some additional methods to [`MatrixExt`] implementors.
+pub trait MatrixMutExt: MatrixExt {
     // Required
     
     /// Returns a mutable reference to a value inside the matrix, at the intersection of the `i`-th row and the `j`-th column.
@@ -1101,7 +1101,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let x = &mut [[1, 2, 4]];
     ///
@@ -1112,7 +1112,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// assert_eq!(x, &[[1, 13, 4]]);
     /// ```
-    /// [`get_mut`]: crate::MatrixMut::get_mut
+    /// [`get_mut`]: crate::MatrixMutExt::get_mut
     unsafe fn get_unchecked_mut(&mut self, row: usize, column: usize) -> &mut Self::Element {
         self.get_mut(row, column).unwrap_unchecked()
     }
@@ -1122,7 +1122,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let mut v = [[0, 1, 3, 3, 4, 5]];
     ///
@@ -1152,7 +1152,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let x = &mut [[1, 2, 4]];
     ///
@@ -1163,7 +1163,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// assert_eq!(x, &[[1, 13, 4]]);
     /// ```
-    /// [`get_nth_mut`]: crate::MatrixMut::get_nth_mut
+    /// [`get_nth_mut`]: crate::MatrixMutExt::get_nth_mut
     unsafe fn get_nth_unchecked_mut(&mut self, n: usize) -> &mut Self::Element {
         let (i, j) = self.subscripts_from(n);
         self.get_unchecked_mut(i, j)
@@ -1176,7 +1176,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::{Matrix, MatrixMut}; 
+    /// use matrixable::{MatrixExt, MatrixMutExt}; 
     /// 
     /// let mut m = [[1, 2, 3]];
     ///
@@ -1202,7 +1202,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::{Matrix, MatrixMut}; 
+    /// use matrixable::{MatrixExt, MatrixMutExt}; 
     /// 
     /// let mut m = [[1, 2, 3]];
     ///
@@ -1236,7 +1236,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let mut m = [
     ///     [(0,0), (0,1), (0,2)],
@@ -1276,7 +1276,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example    
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let mut m = [
     ///     [(0,0), (0,1), (0,2)],
@@ -1307,7 +1307,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     /// let x = &mut [[1, 2, 4], [2, 5, 6]];
     /// 
     /// let third = x.iter_mut().nth(2).unwrap();
@@ -1326,7 +1326,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let x = &mut [[1, 2, 4], [2, 5, 6]];
     /// 
@@ -1353,7 +1353,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let x = &mut [[1, 2, 4], [2, 5, 6]];
     /// 
@@ -1380,7 +1380,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let m = &mut [
     ///     [0, 0, 0],
@@ -1413,7 +1413,7 @@ pub trait MatrixMut: Matrix {
     //
     /// # Example
     /// ```rust    
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let m = &mut [
     ///     [0, 0],
@@ -1442,7 +1442,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let mut  m = [[1, 2], [3, 4], [5, 6]];
     /// let mut en = m.enumerate_mut();
@@ -1466,7 +1466,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let mut m = [[1, 2], [3, 4], [5, 6]];
     /// 
@@ -1486,7 +1486,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     ///
     /// let mut m = [[1, 2], [3, 4], [5, 6]];
     /// 
@@ -1504,7 +1504,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     /// 
     /// let mut m = [[0, 0, 0]; 3];
     ///
@@ -1530,7 +1530,7 @@ pub trait MatrixMut: Matrix {
     ///
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     /// use matrixable::strategies::{AccessStrategy, Reverse};
     ///
     /// let mut m = [[1, 2], [3, 4]];
@@ -1541,7 +1541,7 @@ pub trait MatrixMut: Matrix {
     /// ```
     /// By repeating this method you can obtain a more complex access.
     /// ```rust
-    /// use matrixable::{MatrixMut};
+    /// use matrixable::{MatrixMutExt};
     /// use matrixable::strategies::{Reverse, ShiftBack};
     ///  
     /// let mut m = [[1, 2, 3, 4], [5, 6, 7, 8]];
@@ -1575,7 +1575,7 @@ pub trait MatrixMut: Matrix {
     /// may be better than this method.
     /// # Example
     /// ```rust
-    /// use matrixable::MatrixMut;
+    /// use matrixable::MatrixMutExt;
     /// 
     /// let a = [[10, 20, 30]];
     /// let b = a.duplicate();

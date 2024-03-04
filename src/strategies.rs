@@ -1,6 +1,6 @@
 //! Structures implementing [`AccessStrategy`], [`InPlace`] and/or [`TransformStrategy`] traits.
 
-use crate::{ Matrix, MatrixMut };
+use crate::{ MatrixExt, MatrixMutExt };
 use crate::access::Observer;
 
 use std::ops::Deref;
@@ -12,7 +12,7 @@ pub use crate::req::{ AccessStrategy, TransformStrategy, SwapsDimensions, InPlac
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ TransformStrategy, Identity };
 ///
 /// let m = [
@@ -31,7 +31,8 @@ pub use crate::req::{ AccessStrategy, TransformStrategy, SwapsDimensions, InPlac
 ///
 /// assert_eq!(m, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct Identity;
 
 
@@ -39,7 +40,7 @@ pub struct Identity;
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ TransformStrategy, Transpose };
 ///
 /// let m = [
@@ -63,7 +64,8 @@ pub struct Identity;
 ///
 /// assert_eq!(expected, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct Transpose;
 
 
@@ -71,7 +73,7 @@ pub struct Transpose;
 ///
 /// # Example
 /// ```rust
-/// use matrixable::{ Matrix, strategies::{ TransformStrategy, RotateR }};
+/// use matrixable::{ MatrixExt, strategies::{ TransformStrategy, RotateR }};
 ///
 /// let m = [
 ///    [ 0, 1 ],
@@ -94,7 +96,8 @@ pub struct Transpose;
 ///
 /// assert_eq!(expected, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct RotateR;
 
 
@@ -102,7 +105,7 @@ pub struct RotateR;
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ TransformStrategy, RotateL };
 ///
 /// let m = [
@@ -126,7 +129,8 @@ pub struct RotateR;
 ///
 /// assert_eq!(expected, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct RotateL;
 
 
@@ -134,7 +138,7 @@ pub struct RotateL;
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ TransformStrategy, FlipH };
 ///
 /// let m = [
@@ -159,7 +163,8 @@ pub struct RotateL;
 ///
 /// assert_eq!(expected, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct FlipH;
 
 
@@ -167,7 +172,7 @@ pub struct FlipH;
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ TransformStrategy, FlipV };
 ///
 /// let m = [
@@ -192,7 +197,8 @@ pub struct FlipH;
 ///
 /// assert_eq!(expected, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct FlipV;
 
 
@@ -200,7 +206,7 @@ pub struct FlipV;
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ TransformStrategy, Reverse };
 ///
 /// let m = [
@@ -225,7 +231,8 @@ pub struct FlipV;
 ///
 /// assert_eq!(expected, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct Reverse;
 
 
@@ -236,7 +243,7 @@ pub struct Reverse;
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ TransformStrategy, ShiftFront };
 ///
 /// let m = [
@@ -261,7 +268,8 @@ pub struct Reverse;
 ///
 /// assert_eq!(expected, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct ShiftFront(pub usize);
 
 
@@ -273,7 +281,7 @@ pub struct ShiftFront(pub usize);
 /// # Example
 /// ```rust
 ///
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ TransformStrategy, ShiftBack };
 ///
 /// let m = [
@@ -299,7 +307,8 @@ pub struct ShiftFront(pub usize);
 ///
 /// assert_eq!(expected, t);
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct ShiftBack(pub usize);
 
 
@@ -311,7 +320,7 @@ pub struct ShiftBack(pub usize);
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::SubMatrix;
 ///
 /// let m = [
@@ -330,7 +339,8 @@ pub struct ShiftBack(pub usize);
 /// matrixable::print_rows_debug(&access);
 /// assert!(expected.iter().eq(access.iter()));
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord,  Clone, Copy, Debug)]
 pub struct SubMatrix<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>>(pub Rows, pub Cols);
 
 
@@ -338,7 +348,7 @@ pub struct SubMatrix<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>>(pub Row
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::AccessMap;
 ///
 /// let m = [
@@ -366,14 +376,14 @@ pub struct SubMatrix<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>>(pub Row
 /// ```
 ///
 /// If an element of the mapping refers to no element in the subject, `None` will be returned,
-/// when the [`Matrix::get`] method is called for that entry.
+/// when the [`MatrixExt::get`] method is called for that entry.
 ///
 /// A consequence to this is that iterating over a matrix accessed by a mapping will stop as soon as
 /// an incorrect entry is found inside the mapping. 
 ///
 /// # Example 
 /// ```should_panic
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::AccessMap;
 ///
 /// let m = [[1, 3, 5], [100, 120, 140]];
@@ -403,15 +413,16 @@ pub struct SubMatrix<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>>(pub Row
 /// assert_eq!(access.row(0).unwrap().len(), 3);
 /// assert_eq!(access.row(1).unwrap().len(), 3);
 /// ```
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug)]
-pub struct AccessMap<Mapping: Matrix>(pub Mapping); 
+pub struct AccessMap<Mapping: MatrixExt>(pub Mapping); 
 
 /// This strategy access elements of this matrix following an ordered set of `AccessStrategy`s.
 ///
 ///
 /// # Example
 /// ```rust
-/// use matrixable::Matrix;
+/// use matrixable::MatrixExt;
 /// use matrixable::strategies::{ ShiftFront, FlipH, Transpose, AccessStrategySet };
 ///
 /// let m = [[0, 1], [2, 3]]; 
@@ -444,11 +455,11 @@ pub struct AccessMap<Mapping: Matrix>(pub Mapping);
 /// ```
 /// <br/>
 ///
-/// You can also access elements mutably, in a more complex way than what a simple chain of [`MatrixMut::access_mut`] method can allow.
+/// You can also access elements mutably, in a more complex way than what a simple chain of [`MatrixMutExt::access_mut`] method can allow.
 ///
 /// # Example
 /// ```rust
-/// use matrixable::MatrixMut;
+/// use matrixable::MatrixMutExt;
 /// use matrixable::strategies::{ AccessStrategySet, ShiftBack, Reverse };
 ///
 /// let mut m = [[1, 2, 3, 4], [5, 6, 7, 8]];
@@ -491,6 +502,7 @@ pub struct AccessMap<Mapping: Matrix>(pub Mapping);
 ///
 /// assert_eq!([[2, 3, 16, 6], [5, 7, 11, 10]], m);
 /// ```
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub type AccessStrategySet = Vec<Box<dyn AccessStrategy<Observer>>>;
 
 
@@ -501,7 +513,7 @@ impl Transpose {
     /// In-place transposition optimized for square matrices.
     /// # Panics
     /// Panics if the matrix is not a square matrix.
-    pub fn in_place_square<M: MatrixMut>(&self, m: &mut M) {
+    pub fn in_place_square<M: MatrixMutExt>(&self, m: &mut M) {
         if !m.is_square() {
             panic!("The matrix is not a square matrix.")
         }
@@ -514,7 +526,7 @@ impl Transpose {
     }
     
     /// Performs a regular in-place Transposition.
-    pub fn in_place<M: SwapsDimensions + MatrixMut>(&self, m: &mut M) {
+    pub fn in_place<M: SwapsDimensions + MatrixMutExt>(&self, m: &mut M) {
         // element [0] and element[size-1] does not need to be transposed
         // so we reduce the array into all the elements between indices 0 and size-1
         // that is `1..=size-2`
@@ -557,7 +569,7 @@ impl Reverse {
     /// 
     /// # Panics
     /// Panics if `start` or `end` are out of bounds.
-    pub fn rev<M: MatrixMut>(&self, m: &mut M, range: std::ops::Range<usize>) {
+    pub fn rev<M: MatrixMutExt>(&self, m: &mut M, range: std::ops::Range<usize>) {
         let mid = (range.start + range.end) / 2;
         for i in range.start..mid {
             m.swapn(i, range.end + range.start - i - 1);
@@ -568,7 +580,7 @@ impl Reverse {
     ///
     /// # Panics
     /// Panics if `start` or `end` are out of bounds.
-    pub fn rev2<M: MatrixMut>(&self, m: &mut M, range: std::ops::Range<(usize, usize)>) {
+    pub fn rev2<M: MatrixMutExt>(&self, m: &mut M, range: std::ops::Range<(usize, usize)>) {
         let (start, end) = (m.index_from(range.start), m.index_from(range.end));
         self.rev(m, start..end);
     }
@@ -611,7 +623,7 @@ impl<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>> SubMatrix<Rows, Cols>
 
 // ### AccessStrategy
 
-impl<M: Matrix> AccessStrategy<M> for Identity {
+impl<M: MatrixExt> AccessStrategy<M> for Identity {
     fn access(&self, _m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((i, j))
     }
@@ -619,7 +631,7 @@ impl<M: Matrix> AccessStrategy<M> for Identity {
     fn ncols(&self, m: &M) -> usize { m.num_cols() }
 }
 
-impl<M: Matrix> AccessStrategy<M> for Transpose {
+impl<M: MatrixExt> AccessStrategy<M> for Transpose {
     fn access(&self, _m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((j, i))
     }
@@ -627,7 +639,7 @@ impl<M: Matrix> AccessStrategy<M> for Transpose {
     fn ncols(&self, m: &M) -> usize { m.num_rows() }
 }
 
-impl<M: Matrix> AccessStrategy<M> for RotateR {
+impl<M: MatrixExt> AccessStrategy<M> for RotateR {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
             m.num_rows().checked_sub(j)?.checked_sub(1)?,
@@ -638,7 +650,7 @@ impl<M: Matrix> AccessStrategy<M> for RotateR {
     fn ncols(&self, m: &M) -> usize { m.num_rows() }
 }
 
-impl<M: Matrix> AccessStrategy<M> for RotateL {
+impl<M: MatrixExt> AccessStrategy<M> for RotateL {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
             j,
@@ -649,7 +661,7 @@ impl<M: Matrix> AccessStrategy<M> for RotateL {
     fn ncols(&self, m: &M) -> usize { m.num_rows() }
 }
 
-impl<M: Matrix> AccessStrategy<M> for FlipH {
+impl<M: MatrixExt> AccessStrategy<M> for FlipH {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
             i,
@@ -660,7 +672,7 @@ impl<M: Matrix> AccessStrategy<M> for FlipH {
     fn ncols(&self, m: &M) -> usize { m.num_cols() }
 }
 
-impl<M: Matrix> AccessStrategy<M> for FlipV {
+impl<M: MatrixExt> AccessStrategy<M> for FlipV {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
             m.num_rows().checked_sub(i)?.checked_sub(1)?,
@@ -671,7 +683,7 @@ impl<M: Matrix> AccessStrategy<M> for FlipV {
     fn ncols(&self, m: &M) -> usize { m.num_cols() }
 }
 
-impl<M: Matrix> AccessStrategy<M> for Reverse {
+impl<M: MatrixExt> AccessStrategy<M> for Reverse {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((
             m.num_rows().checked_sub(i)?.checked_sub(1)?,
@@ -682,7 +694,7 @@ impl<M: Matrix> AccessStrategy<M> for Reverse {
     fn ncols(&self, m: &M) -> usize { m.num_cols() }
 }
 
-impl<M: Matrix> AccessStrategy<M> for ShiftBack {
+impl<M: MatrixExt> AccessStrategy<M> for ShiftBack {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         let mut n = m.checked_index_from((i, j))?;
         let len = m.size();
@@ -704,7 +716,7 @@ impl<M: Matrix> AccessStrategy<M> for ShiftBack {
     fn ncols(&self, m: &M) -> usize { m.num_cols() }
 }
 
-impl<M: Matrix> AccessStrategy<M> for ShiftFront {
+impl<M: MatrixExt> AccessStrategy<M> for ShiftFront {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         let mut n = m.checked_index_from((i, j))?;
         let len = m.size();
@@ -725,7 +737,7 @@ impl<M: Matrix> AccessStrategy<M> for ShiftFront {
     fn ncols(&self, m: &M) -> usize { m.num_cols() }
 }
 
-impl<M: Matrix, Rows: RangeBounds<usize>, Cols: RangeBounds<usize>>
+impl<M: MatrixExt, Rows: RangeBounds<usize>, Cols: RangeBounds<usize>>
 AccessStrategy<M> for SubMatrix<Rows, Cols> {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         let rows = Self::get_range(m.num_rows(), &self.0);
@@ -760,8 +772,8 @@ AccessStrategy<M> for SubMatrix<Rows, Cols> {
     }
 }
 
-impl<M: Matrix, Mapping: Matrix> AccessStrategy<M> for AccessMap<Mapping> 
-    where for <'a> &'a <Mapping as Matrix>::Element: Into<&'a usize>
+impl<M: MatrixExt, Mapping: MatrixExt> AccessStrategy<M> for AccessMap<Mapping> 
+    where for <'a> &'a <Mapping as MatrixExt>::Element: Into<&'a usize>
 {
     /// # Panics
     /// Panics if an element of `Mapping` points to no element inside `m`.
@@ -776,7 +788,7 @@ impl<M: Matrix, Mapping: Matrix> AccessStrategy<M> for AccessMap<Mapping>
     fn ncols(&self, _m: &M) -> usize { self.0.num_cols() }
 }
 
-impl <M: Matrix, S: AccessStrategy<M>> AccessStrategy<M> for &S {
+impl <M: MatrixExt, S: AccessStrategy<M>> AccessStrategy<M> for &S {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         (*self).access(m, i, j)
     }
@@ -784,7 +796,7 @@ impl <M: Matrix, S: AccessStrategy<M>> AccessStrategy<M> for &S {
     fn ncols(&self, m: &M) -> usize { (*self).ncols(m) }
 }
 
-impl <M: Matrix> AccessStrategy<M> for Box<dyn AccessStrategy<M>> {
+impl <M: MatrixExt> AccessStrategy<M> for Box<dyn AccessStrategy<M>> {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         self.deref().access(m, i, j)
     }
@@ -792,7 +804,7 @@ impl <M: Matrix> AccessStrategy<M> for Box<dyn AccessStrategy<M>> {
     fn ncols(&self, m: &M) -> usize { self.deref().ncols(m) }
 }
 
-impl <M: Matrix> AccessStrategy<M> for &dyn AccessStrategy<M> {
+impl <M: MatrixExt> AccessStrategy<M> for &dyn AccessStrategy<M> {
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         (*self).access(m, i, j)
     }
@@ -800,7 +812,7 @@ impl <M: Matrix> AccessStrategy<M> for &dyn AccessStrategy<M> {
     fn ncols(&self, m: &M) -> usize { (*self).ncols(m) }
 }
 
-impl <M: Matrix> AccessStrategy<M> for AccessStrategySet {
+impl <M: MatrixExt> AccessStrategy<M> for AccessStrategySet {
     fn access(&self, m: &M, mut i: usize, mut j: usize) -> Option<(usize, usize)> {
         let observer = Observer::new(
             m.dimensions(),
@@ -833,7 +845,7 @@ impl <M: Matrix> AccessStrategy<M> for AccessStrategySet {
 
 // ### InPlace
 
-impl<M: Matrix> InPlace<M> for Identity {
+impl<M: MatrixExt> InPlace<M> for Identity {
     /// Does nothing internally.
     fn in_place(&self, _m: &mut M) {}
 }
@@ -872,7 +884,7 @@ where
     }
 }
 
-impl<M: MatrixMut> InPlace<M> for FlipH { 
+impl<M: MatrixMutExt> InPlace<M> for FlipH { 
     fn in_place(&self, m: &mut M) {
         let cols = m.num_cols();
         let rows = m.num_rows();
@@ -885,7 +897,7 @@ impl<M: MatrixMut> InPlace<M> for FlipH {
     }
 }
 
-impl<M: MatrixMut> InPlace<M> for FlipV {
+impl<M: MatrixMutExt> InPlace<M> for FlipV {
     fn in_place(&self, m: &mut M) {
         let cols = m.num_cols();
         let rows = m.num_rows();
@@ -898,13 +910,13 @@ impl<M: MatrixMut> InPlace<M> for FlipV {
     }
 }
 
-impl<M: MatrixMut> InPlace<M> for Reverse { 
+impl<M: MatrixMutExt> InPlace<M> for Reverse { 
     fn in_place(&self, m: &mut M) {
         Reverse.rev(m, 0..m.size());
     }
 }
 
-impl<M: MatrixMut> InPlace<M> for ShiftBack {
+impl<M: MatrixMutExt> InPlace<M> for ShiftBack {
     // Does not nothing if shift equals 0
     fn in_place(&self, m: &mut M) {
         let len = m.size();
@@ -923,7 +935,7 @@ impl<M: MatrixMut> InPlace<M> for ShiftBack {
     }
 }
 
-impl<M: MatrixMut> InPlace<M> for ShiftFront {
+impl<M: MatrixMutExt> InPlace<M> for ShiftFront {
     fn in_place(&self, m: &mut M) {
         let len = m.size();
         let shift = self.0 % len;
@@ -943,13 +955,13 @@ impl<M: MatrixMut> InPlace<M> for ShiftFront {
 
 // ### TransformStrategy
 
-impl<M: Matrix> TransformStrategy<M> for Identity {
+impl<M: MatrixExt> TransformStrategy<M> for Identity {
     type Output = M;
     
     fn out_of(&self, m: M) -> Self::Output { m }
 }
 
-impl<M: SwapsDimensions + MatrixMut > TransformStrategy<M> for Transpose {
+impl<M: SwapsDimensions + MatrixMutExt > TransformStrategy<M> for Transpose {
     type Output = M;
     
     fn out_of(&self, mut m: M) -> Self::Output {
@@ -965,10 +977,10 @@ impl<M: SwapsDimensions + MatrixMut > TransformStrategy<M> for Transpose {
     }
 }
 
-impl<M: Matrix> TransformStrategy<M> for RotateR 
+impl<M: MatrixExt> TransformStrategy<M> for RotateR 
 where 
     Transpose: TransformStrategy<M>,
-    <Transpose as TransformStrategy<M>>::Output: Matrix,
+    <Transpose as TransformStrategy<M>>::Output: MatrixExt,
     FlipH: TransformStrategy<<Transpose as TransformStrategy<M>>::Output>
 {
     type Output = <FlipH as TransformStrategy<<Transpose as TransformStrategy<M>>::Output>>::Output;
@@ -978,10 +990,10 @@ where
     }
 }
 
-impl<M: Matrix> TransformStrategy<M> for RotateL
+impl<M: MatrixExt> TransformStrategy<M> for RotateL
 where
     Transpose: TransformStrategy<M>,
-    <Transpose as TransformStrategy<M>>::Output: Matrix,
+    <Transpose as TransformStrategy<M>>::Output: MatrixExt,
     FlipV: TransformStrategy<<Transpose as TransformStrategy<M>>::Output>
 {
     type Output = <FlipV as TransformStrategy<<Transpose as TransformStrategy<M>>::Output>>::Output;
@@ -991,7 +1003,7 @@ where
     }
 }
 
-impl<M: MatrixMut> TransformStrategy<M> for FlipH {
+impl<M: MatrixMutExt> TransformStrategy<M> for FlipH {
     type Output = M;
     
     fn out_of(&self, mut m: M) -> Self::Output {
@@ -1007,7 +1019,7 @@ impl<M: MatrixMut> TransformStrategy<M> for FlipH {
     }
 }
 
-impl<M: MatrixMut> TransformStrategy<M> for FlipV {
+impl<M: MatrixMutExt> TransformStrategy<M> for FlipV {
     type Output = M;
     
     fn out_of(&self, mut m: M) -> Self::Output {
@@ -1023,7 +1035,7 @@ impl<M: MatrixMut> TransformStrategy<M> for FlipV {
     }
 }
 
-impl<M: MatrixMut> TransformStrategy<M> for Reverse {
+impl<M: MatrixMutExt> TransformStrategy<M> for Reverse {
     type Output = M;
     
     fn out_of(&self, mut m: M) -> Self::Output {
@@ -1033,7 +1045,7 @@ impl<M: MatrixMut> TransformStrategy<M> for Reverse {
     }
 }
 
-impl<M: MatrixMut> TransformStrategy<M> for ShiftBack {
+impl<M: MatrixMutExt> TransformStrategy<M> for ShiftBack {
     type Output = M;
     
     fn out_of(&self, mut m: M) -> Self::Output {
@@ -1054,7 +1066,7 @@ impl<M: MatrixMut> TransformStrategy<M> for ShiftBack {
     }
 }
 
-impl<M: MatrixMut> TransformStrategy<M> for ShiftFront {
+impl<M: MatrixMutExt> TransformStrategy<M> for ShiftFront {
     type Output = M;
     
     fn out_of(&self, mut m: M) -> Self::Output {

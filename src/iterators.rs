@@ -4,7 +4,7 @@
 //!
 //! # Examples
 //! ```rust
-//! use matrixable::Matrix;
+//! use matrixable::MatrixExt;
 //!
 //! let m = [
 //!     ['a', 'b', 'c'],
@@ -45,9 +45,8 @@
 //! It may happen you just need a unique element. In that case you will rather use [`.nth()`](std::iter::Iterator::nth) 
 //! from the standard [`Iterator`] trait.
 //!
-//! # Examples
 //! ```rust
-//! use matrixable::MatrixMut;
+//! use matrixable::MatrixMutExt;
 //!
 //! let mut m = [
 //!     ['a', 'b', 'c'],
@@ -75,8 +74,8 @@ use std::{
 /// - Add a feature for itertools crate (or even not finally)
 /// - Add a feature for serde crate for serialization of matrixlikes (or even not finally)
 
-//use crate::view::MatrixView;
-use crate::{Matrix, MatrixMut};
+//use crate::view::MatrixExtView;
+use crate::{MatrixExt, MatrixMutExt};
 
 macro_rules! iter {
     (
@@ -87,7 +86,7 @@ macro_rules! iter {
         $nextbackimpl:item 
     ) => {
         $(
-            #[derive(Debug)]
+            #[derive(Hash, Debug)]
             pub struct $name<'a, M: $matrixTrait>
             where M::Element: 'a 
             {
@@ -250,7 +249,7 @@ macro_rules! iter {
 }
 
 
-iter!{Iter {/*no mut */} { const } Matrix get, IterMut { mut } { mut } MatrixMut get_mut;
+iter!{Iter {/*no mut */} { const } MatrixExt get, IterMut { mut } { mut } MatrixMutExt get_mut;
     |_m: &M| (0, 0) ;
     fn increment(&self, mut i: usize, mut j: usize) -> (usize, usize) {
         j += 1;
@@ -273,7 +272,7 @@ iter!{Iter {/*no mut */} { const } Matrix get, IterMut { mut } { mut } MatrixMut
     }
 }
 
-iter!{Row {/*no mut */} { const } Matrix get row, RowMut { mut } { mut } MatrixMut get_mut row;
+iter!{Row {/*no mut */} { const } MatrixExt get row, RowMut { mut } { mut } MatrixMutExt get_mut row;
     |_m: &M, row| (row, 0) ;
     fn increment(&self, i: usize, j: usize) -> (usize, usize) {  
         (i, j+1)
@@ -292,7 +291,7 @@ iter!{Row {/*no mut */} { const } Matrix get row, RowMut { mut } { mut } MatrixM
     }
 }
 
-iter!{Column {/*no mut */} { const } Matrix get col, ColumnMut { mut } { mut } MatrixMut get_mut col;
+iter!{Column {/*no mut */} { const } MatrixExt get col, ColumnMut { mut } { mut } MatrixMutExt get_mut col;
     |_m: &M, col| (0, col) ;
     fn increment(&self, i: usize, j: usize) -> (usize, usize) {  
         (i + 1, j)
@@ -310,7 +309,7 @@ iter!{Column {/*no mut */} { const } Matrix get col, ColumnMut { mut } { mut } M
     }
 }
 
-iter!{Diag {/*no mut */} { const } Matrix get n, DiagMut { mut } { mut } MatrixMut get_mut n;
+iter!{Diag {/*no mut */} { const } MatrixExt get n, DiagMut { mut } { mut } MatrixMutExt get_mut n;
     |m: &M, mut n| {
         let lastrow = m.num_rows() - 1;
         if n <= lastrow {
@@ -344,42 +343,42 @@ iter!{Diag {/*no mut */} { const } Matrix get n, DiagMut { mut } { mut } MatrixM
 }
 
 
-impl<'a, M: Matrix> Copy for Iter<'a, M>
+impl<'a, M: MatrixExt> Copy for Iter<'a, M>
 where M::Element: 'a {}
 
-impl<'a, M: Matrix> Copy for Row<'a, M>
+impl<'a, M: MatrixExt> Copy for Row<'a, M>
 where M::Element: 'a {}
 
-impl<'a, M: Matrix> Copy for Column<'a, M>
+impl<'a, M: MatrixExt> Copy for Column<'a, M>
 where M::Element: 'a {}
 
-impl<'a, M: Matrix> Copy for Diag<'a, M>
+impl<'a, M: MatrixExt> Copy for Diag<'a, M>
 where M::Element: 'a {}
 
 
 
-impl<'a, M: Matrix> Clone for Iter<'a, M>
+impl<'a, M: MatrixExt> Clone for Iter<'a, M>
 where M::Element: 'a {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, M: Matrix> Clone for Row<'a, M>
+impl<'a, M: MatrixExt> Clone for Row<'a, M>
 where M::Element: 'a {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, M: Matrix> Clone for Column<'a, M>
+impl<'a, M: MatrixExt> Clone for Column<'a, M>
 where M::Element: 'a {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, M: Matrix> Clone for Diag<'a, M>
+impl<'a, M: MatrixExt> Clone for Diag<'a, M>
 where M::Element: 'a {
     fn clone(&self) -> Self {
         *self
@@ -488,37 +487,37 @@ macro_rules! dimensional_iterator {
 
 
 dimensional_iterator!{ 
-    Rows, const, { /* no mut */}, Matrix,
+    Rows, const, { /* no mut */}, MatrixExt,
     Row<'a, M>,
     row, num_rows 
 }
 
 dimensional_iterator!{ 
-    RowsMut, mut, { mut }, MatrixMut,
+    RowsMut, mut, { mut }, MatrixMutExt,
     RowMut<'a, M>,
     row_mut, num_rows 
 }
 
 dimensional_iterator!{ 
-    Columns, const, {/* no mut */}, Matrix,
+    Columns, const, {/* no mut */}, MatrixExt,
     Column<'a, M>,
     col, num_cols
 }
 
 dimensional_iterator!{ 
-    ColumnsMut, mut, { mut }, MatrixMut,
+    ColumnsMut, mut, { mut }, MatrixMutExt,
     ColumnMut<'a, M>,
     col_mut, num_cols 
 }
 
 dimensional_iterator!{ 
-    Diags, const, { /* no mut */ }, Matrix,
+    Diags, const, { /* no mut */ }, MatrixExt,
     Diag<'a, M>,
     diag, num_diags 
 }
 
 dimensional_iterator!{ 
-    DiagsMut, mut, { mut }, MatrixMut,
+    DiagsMut, mut, { mut }, MatrixMutExt,
     DiagMut<'a, M>,
     diag_mut, num_diags 
 }

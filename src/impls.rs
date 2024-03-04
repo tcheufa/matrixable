@@ -1,10 +1,10 @@
-//! Contains the implementation of `Matrix` for the standard 2D array `[[T; N]; M]`.
+//! Contains the implementation of `MatrixExt` for the standard 2D array `[[T; N]; M]`.
 
-use crate::{Matrix, MatrixMut};
+use crate::{MatrixExt, MatrixMutExt};
 use crate::req::*;
 use crate::strategies::Transpose;
 
-impl<T, const N: usize, const M: usize> Matrix for [[T; N]; M]
+impl<T, const N: usize, const M: usize> MatrixExt for [[T; N]; M]
 {
     type Element = T;
     
@@ -29,7 +29,7 @@ impl<T, const N: usize, const M: usize> Matrix for [[T; N]; M]
     }
 }
 
-impl<T, const N: usize, const M: usize> MatrixMut for [[T; N]; M] {
+impl<T, const N: usize, const M: usize> MatrixMutExt for [[T; N]; M] {
     fn get_mut(&mut self, i: usize, j: usize) -> Option<&mut Self::Element> {
         self.as_mut_slice().get_mut(i)?.as_mut_slice().get_mut(j)
     }
