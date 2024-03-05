@@ -1,8 +1,18 @@
 # Version 0.1.1 (March 04, 2024)
 
-* Updated crate metadata inside `Cargo.toml` file.
+* Updated crate's metadata inside `Cargo.toml` file.
 
 # Version 0.1.2 (March 05, 2024)
 
 * Deprecated trait function `MatrixExt::is_one_dimension` in favor of a more concise name that is `MatrixExt::is_vector`.
 * Updated `README` file: added library description and the `IdentityMatrix` example.
+
+# Version 0.1.3 (March 06, 2024)
+
+* Made a more prettier output produced by functions `print_rows_debug`, `print_columns_debug` and `print_diagonals_debug`.
+
+* Corrected variable name in `print_diagonals_debug`: ~`cols`~ => `diags`
+
+* Updated example in `README.md` and added output.
+
+* Updated `Cargo.toml` file

@@ -1,11 +1,12 @@
 [package]
 name = "matrixable"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["tcheufa"]
 description = "Traits for extending matrix-like structures capabilities."
 repository = "https://github.com/tcheufa/matrixable"
 keywords = ["matrix", "trait"]
+categories = ["data-structures", "mathematics", "science"]
 license = "MIT OR Apache-2.0"
 
 [dependencies]

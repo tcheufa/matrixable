@@ -31,11 +31,29 @@ fn main() {
     let identity = IdentityMatrix { size: 3 };
     
     matrixable::print_rows_debug(&identity);
+    matrixable::print_columns_debug(&identity);
+    matrixable::print_diagonals_debug(&identity);
 }
+```
+```
+Rows
+0: [1, 0, 0]
+1: [0, 1, 0]
+2: [0, 0, 1]
+Columns
+0: [1, 0, 0]
+1: [0, 1, 0]
+2: [0, 0, 1]
+Diagonals
+0: [0]
+1: [0, 0]
+2: [1, 1, 1]
+3: [0, 0]
+4: [0]
+
 ```
 
 This library has two main traits: `MatrixExt` and `MatrixMutExt`.
-
 
 ## MatrixExt 
 

@@ -15,17 +15,17 @@ mod impls;
 
 pub fn print_rows_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
     println!("Rows"); 
-    p.rows().for_each(|row| println!("{:?}", row.collect::<Vec<_>>()))
+    p.rows().enumerate().for_each(|(i, row)| println!("{i}: {:?}", row.collect::<Vec<_>>()))
 }
 
 pub fn print_columns_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
     println!("Columns");
-    p.cols().for_each(|col| println!("{:?}", col.collect::<Vec<_>>()))
+    p.cols().enumerate().for_each(|(i, col)| println!("{i}: {:?}", col.collect::<Vec<_>>()))
 }
 
 pub fn print_diagonals_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
     println!("Diagonals");
-    p.diags().for_each(|col| println!("{:?}", col.collect::<Vec<_>>()))
+    p.diags().enumerate().for_each(|(i, diag)| println!("{i}: {:?}", diag.collect::<Vec<_>>()))
 }
 
 
