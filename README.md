@@ -35,6 +35,7 @@ fn main() {
     matrixable::print_diagonals_debug(&identity);
 }
 ```
+Output:
 ```
 Rows
 0: [1, 0, 0]
