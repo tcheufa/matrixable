@@ -63,7 +63,7 @@ Once implemented `MatrixMutExt` structs inherits features from `MatrixExt` plus 
 * **mutability**: Functions provided by this trait allow elements to be mutated. Mutable versions of the above features also become available (iterators, access).
 * **in-place modification**.
 
-
+## 
 See [**this**](https://docs.rs/matrixable/0.1.0/matrixable/) documentation for more information.
 
 
