@@ -36,7 +36,9 @@ fn main() {
 
 This library possesses two main traits: `MatrixExt` and `MatrixMutExt`.
 
+
 ## MatrixExt 
+
 This trait requires three methods to be implemented:
 
 * `num_rows`: which should give the number of rows of the matrix.
@@ -50,9 +52,10 @@ Once those methods are implemented, the following features automatically become 
 * **access**: elements differently without changing their positions: transpose access, rotate access, submatrix... 
 * **transformation**: transform struct into another type, maybe another matrix.
 * **metadata**: obtain information about the matrix: symmetry, dimensions, diagonality...
-* and much more !
+
 
 ## MatrixMutExt
+
 This traits requires for the struct to first implement `MatrixExt` as well as its single required method: `get_mut`.
 
 Once implemented `MatrixMutExt` structs inherits features from `MatrixExt` plus the following:
@@ -61,7 +64,6 @@ Once implemented `MatrixMutExt` structs inherits features from `MatrixExt` plus 
 * **in-place modification**.
 
 
-plus an additional one to enable mutability of elements.
 See [**this**](https://docs.rs/matrixable/0.1.0/matrixable/) documentation for more information.
 
 
