@@ -34,7 +34,7 @@ fn main() {
 }
 ```
 
-This library possesses two main traits: `MatrixExt` and `MatrixMutExt`.
+This library has two main traits: `MatrixExt` and `MatrixMutExt`.
 
 
 ## MatrixExt 
@@ -45,7 +45,7 @@ This trait requires three methods to be implemented:
 * `num_cols`: which should give the the number of columns.
 * `get`: which may return a reference to an element of the matrix.
 
-Once those methods are implemented, the following features automatically become available:
+Once these methods are implemented, the following features automatically become available:
 
 * **immutability**: All the functions provided by this trait does not modify elements of the matrix-like struct unless that struct is consumed in the process.
 * **iterators**: iteratate over all elements and also over rows, columns and diagonals.
