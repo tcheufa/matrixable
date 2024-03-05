@@ -728,24 +728,29 @@ pub trait MatrixExt
     }
 
     
-    /// Checks if the matrix has one dimension (number of columns is `1` or number of rows is `1`)
+    /// Checks if the matrix is a vector (number of columns is `1` or number of rows is `1`)
     /// ```rust
     /// use matrixable::MatrixExt;
     ///
-    /// assert_eq!(true, [[0]].is_one_dimension());
-    /// assert_eq!(true, [[0, 0]].is_one_dimension());
-    /// assert_eq!(true, [[0], [0]].is_one_dimension());
-    /// assert_eq!(false, [[0, 0], [0, 0]].is_one_dimension());
+    /// assert_eq!(true, [[0]].is_vector());
+    /// assert_eq!(true, [[0, 0]].is_vector());
+    /// assert_eq!(true, [[0], [0]].is_vector());
+    /// assert_eq!(false, [[0, 0], [0, 0]].is_vector());
     ///
     /// let empty: [[u8; 0]; 0] = [];
-    /// assert_eq!(false, empty.is_one_dimension());
+    /// assert_eq!(false, empty.is_vector());
     ///
     /// let empty2: [[u8; 0]; 1] = [[]];
-    /// assert_eq!(false, empty2.is_one_dimension());
+    /// assert_eq!(false, empty2.is_vector());
     ///
     /// let empty3: [[u8; 0]; 2] = [[], []];
-    /// assert_eq!(false, empty3.is_one_dimension());
+    /// assert_eq!(false, empty3.is_vector());
     /// ```
+    fn is_vector(&self) -> bool {
+        self.num_rows() == 1 || self.num_cols() == 1
+    }
+
+    #[deprecated(since="0.1.2", note="please use `is_vector` instead")]
     fn is_one_dimension(&self) -> bool {
         self.num_rows() == 1 || self.num_cols() == 1
     }
@@ -862,6 +867,7 @@ pub trait MatrixExt
     fn is_singleton(&self) -> bool {
         self.dimensions() == (1, 1)
     }
+    
     
     /// Checks if the matrix is horizontal (number of rows of the matrix is lower than number of columns).
     ///
