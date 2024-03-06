@@ -2,7 +2,7 @@
 //!
 //! A matrix implementing [`MatrixExt`] is by default in *[`Row Major Order`]*, but you can still change it using transpose access.
 //!
-//! This crate provides also an extension for the standard 2D array `[[T; N]; M]`.
+//! Note also that this crate extends the standard 2D array `[[T; N]; M]`.
 //!
 //! [`Row Major Order`]: https://en.m.wikipedia.org/wiki/Row-_and_column-major_order
 
@@ -434,6 +434,13 @@ pub trait MatrixExt
         }
     }
 
+    /// Returns an iterator over the elements of the `i`-th row, without doing bound checking.
+    unsafe fn row_unchecked(&self, i: usize) -> Row<'_, Self> 
+    where Self: Sized
+    {
+       self.row(i).unwrap_unchecked()
+    }    
+    
     /// Returns an iterator over elements of the `j`-th column.
     ///
     /// None is returned if `j >= number of columns`.    
@@ -463,8 +470,15 @@ pub trait MatrixExt
             Some(Column::new(self, j))
         }
     }
-  
-    /// Returns an iterator over element of the n-th diagonal of the matrix,
+
+    /// Returns an iterator over the elements of the `j`-th column, without doing bound checking.
+    unsafe fn col_unchecked(&self, j: usize) -> Column<'_, Self> 
+    where Self: Sized
+    {
+        self.col(j).unwrap_unchecked()
+    }    
+    
+    /// Returns an iterator over element of the `n`-th diagonal of the matrix,
     /// starting from bottom-left to top-right.
     ///
     /// # Example
@@ -481,6 +495,8 @@ pub trait MatrixExt
     /// assert_eq!(Some(&4), diag.next());
     /// assert_eq!(Some(&5), diag.next());
     /// assert_eq!(None, diag.next());
+    ///
+    /// assert!(m.diag(5).is_none());
     /// ```
     fn diag(&self, n: usize) ->  Option<Diag<'_, Self>>
     where Self: Sized
@@ -491,6 +507,13 @@ pub trait MatrixExt
         else {
             Some(Diag::new(self, n))
         }
+    }
+    
+    /// Returns an iterator over the elements of the `n`-th diagonal, without doing bound checking.
+    unsafe fn diag_unchecked(&self, n: usize) -> Diag<'_, Self> 
+    where Self: Sized
+    {
+        self.diag(n).unwrap_unchecked()
     }
     
     /// Returns the main diagonal i.e. all elements at position `(i, i)`.
@@ -584,43 +607,43 @@ pub trait MatrixExt
     ///     [6, 7, 8]
     /// ];
     /// 
-    /// // After the main diagonal.
+    /// let mut diags = m.diags();
+    ///
     /// {
-    ///     let mut diag = m.diag(3).unwrap();
-    ///     assert_eq!(Some(&1), diag.next());
-    ///     assert_eq!(Some(&5), diag.next());
-    ///     assert_eq!(None, diag.next());
+    ///     let mut first_diag = diags.next().unwrap();
+    ///     assert_eq!(Some(&6), first_diag.next());
+    ///     assert_eq!(None, first_diag.next());
     /// }
-    /// 
-    /// // At the main diagonal
+    ///
     /// {
-    ///     let mut diag = m.diag(2).unwrap();
-    ///     assert_eq!(Some(&0), diag.next());
-    ///     assert_eq!(Some(&4), diag.next());
-    ///     assert_eq!(Some(&8), diag.next());
-    ///     assert_eq!(None, diag.next());
-    /// }
-    /// 
-    /// // Before the main diagonal.
-    /// {
-    ///     let mut diag = m.diag(1).unwrap();
+    ///     let mut diag = diags.next().unwrap();
     ///     assert_eq!(Some(&3), diag.next());
     ///     assert_eq!(Some(&7), diag.next());
     ///     assert_eq!(None, diag.next());
     /// }
     /// 
-    /// // At edges.
     /// {
-    ///     let mut first_diag = m.diag(0).unwrap();
-    ///     assert_eq!(Some(&6), first_diag.next());
-    ///     assert_eq!(None, first_diag.next());
-    ///  
-    ///     let mut last_diag = m.diag(4).unwrap();
+    ///     let mut diag = diags.next().unwrap();
+    ///     assert_eq!(Some(&0), diag.next());
+    ///     assert_eq!(Some(&4), diag.next());
+    ///     assert_eq!(Some(&8), diag.next());
+    ///     assert_eq!(None, diag.next());
+    /// }
+    ///
+    /// {
+    ///     let mut diag = diags.next().unwrap();
+    ///     assert_eq!(Some(&1), diag.next());
+    ///     assert_eq!(Some(&5), diag.next());
+    ///     assert_eq!(None, diag.next());
+    /// }
+    /// 
+    /// {
+    ///     let mut last_diag = diags.next().unwrap();
     ///     assert_eq!(Some(&2), last_diag.next());
     ///     assert_eq!(None, last_diag.next());
     /// }
     ///
-    /// assert!(m.diag(5).is_none());
+    /// assert!(diags.next().is_none());
     /// ```
     fn diags(&self) -> Diags<Self> where Self: Sized {
         Diags::from(self) 
@@ -666,7 +689,44 @@ pub trait MatrixExt
     where Self: Sized {
         Access::new(self, strategy)
     }
-       
+    
+    
+    /// Converts a matrix into an iterator over its elements.
+    /// # Important
+    /// Struct implementing the trait `MatrixExt` and `Into<Vec<MatrixExt::Element>>` must ensure 
+    /// that converting matrix into a `Vec` does not change the order of elements (follows the *Row Major Order*).
+    fn into_iter(self) -> std::vec::IntoIter<Self::Element>
+    where Self: Into<Vec<Self::Element>> { 
+        self.into().into_iter()
+    }       
+    
+    /// Converts a matrix into an iterator over rows of the matrix.
+    /// # Important
+    /// Struct implementing the trait `MatrixExt` and `Into<Vec<MatrixExt::Element>>` must ensure 
+    /// that converting matrix into a `Vec` does not change the order of elements (follows the *Row Major Order*).
+    fn into_rows(self) -> IntoRows<Self::Element> 
+    where Self: Into<Vec<Self::Element>> { 
+        IntoRows::from(self) 
+    }
+
+    /// Converts a matrix into an iterator over columns of the matrix.
+    /// # Important
+    /// Struct implementing the trait `MatrixExt` and `Into<Vec<MatrixExt::Element>>` must ensure 
+    /// that converting matrix into a `Vec` does not change the order of elements (follows the *Row Major Order*).
+    fn into_cols(self) -> IntoCols<Self::Element> 
+    where Self: Into<Vec<Self::Element>> {
+          IntoCols::from(self) 
+    }
+
+    /// Converts a matrix into an iterator over diagonals of the matrix.
+    /// # Important
+    /// Struct implementing the trait `MatrixExt` and `Into<Vec<MatrixExt::Element>>` must ensure 
+    /// that converting matrix into a `Vec` does not change the order of elements (follows the *Row Major Order*).
+    fn into_diags(self) -> IntoDiags<Self::Element>
+    where Self: Into<Vec<Self::Element>> { 
+        IntoDiags::from(self) 
+    }
+
     /// Consumes the matrix an returns an output defined by a `TransformStrategy`. 
     fn transform<S: TransformStrategy<Self>>(self, strategy: &S) -> S::Output  
     where Self: Sized
@@ -1326,7 +1386,7 @@ pub trait MatrixMutExt: MatrixExt {
     /// ```
     fn iter_mut(&mut self) -> IterMut<'_, Self> where Self: Sized { IterMut::new(self) }
     
-    /// Returns an iterator that allows modifying each element of the `i`-th row  .
+    /// Returns an iterator that allows modifying each element of the `i`-th row.
     ///
     /// None is returned if `i >= number of rows`.
     ///
@@ -1351,6 +1411,12 @@ pub trait MatrixMutExt: MatrixExt {
         else {
             Some(RowMut::new(self, i))
         }
+    }
+    
+    /// Returns an iterator over the mutable elements of the `i`-th row, without doing bound checking.
+    unsafe fn row_unchecked_mut(&mut self, i: usize) -> RowMut<'_, Self> 
+    where Self: Sized {
+        self.row_mut(i).unwrap_unchecked()
     }
     
     /// Returns an iterator over that allows modifying each element of the `j`-th column.
@@ -1379,6 +1445,12 @@ pub trait MatrixMutExt: MatrixExt {
             Some(ColumnMut::new(self, j))
         }
     } 
+    
+    /// Returns an iterator over the mutable elements of the `j`-th column, without doing bound checking.
+    unsafe fn col_unchecked_mut(&mut self, j: usize) -> ColumnMut<'_, Self>
+    where Self: Sized {
+        self.col_mut(j).unwrap_unchecked()
+    }
 
     /// Returns an iterator over that allows modifying each element of the `n`-th diagonal.
     ///
@@ -1413,6 +1485,12 @@ pub trait MatrixMutExt: MatrixExt {
         else {
             Some(DiagMut::new(self, n))
         }
+    }
+    
+    /// Returns an iterator over the mutable elements of the `n`-th diagonal, without doing bound checking.
+    unsafe fn diag_unchecked_mut(&mut self, n: usize) -> DiagMut<'_, Self>
+    where Self: Sized {
+        self.diag_mut(n).unwrap_unchecked()
     }
     
     /// Returns the main diagonal (mutable).

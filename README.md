@@ -8,7 +8,7 @@ use matrixable::MatrixExt;
 struct IdentityMatrix { size: usize }
 
 impl MatrixExt for IdentityMatrix {
-    type Element = u32;
+    type Element = i32;
     
     fn num_rows(&self) -> usize { self.size }
 
@@ -31,8 +31,21 @@ fn main() {
     let identity = IdentityMatrix { size: 3 };
     
     matrixable::print_rows_debug(&identity);
+    println!();
+
     matrixable::print_columns_debug(&identity);
+    println!();
+
     matrixable::print_diagonals_debug(&identity);
+    println!();
+
+    println!("Properties:");
+    println!("* Square matrix: {}", identity.is_square());
+    println!("* Symmetric: {}", identity.is_symmetric());
+    println!("* Skew-symmetric: {}", identity.is_skew_symmetric());
+    println!("* Diagonal matrix: {}", identity.is_diagonal().0);
+    println!("* Scalar matrix: {}", identity.is_scalar().0);
+    println!("* Constant matrix: {}", identity.is_constant().0);
 }
 ```
 Output:
@@ -41,16 +54,26 @@ Rows
 0: [1, 0, 0]
 1: [0, 1, 0]
 2: [0, 0, 1]
+
 Columns
 0: [1, 0, 0]
 1: [0, 1, 0]
 2: [0, 0, 1]
+
 Diagonals
 0: [0]
 1: [0, 0]
 2: [1, 1, 1]
 3: [0, 0]
 4: [0]
+
+Properties:
+* Square matrix: true
+* Symmetric: true
+* Skew-symmetric: false
+* Diagonal matrix: true
+* Scalar matrix: true
+* Constant matrix: false
 
 ```
 
@@ -81,6 +104,9 @@ Once implemented `MatrixMutExt` structs inherits features from `MatrixExt` plus 
 
 * **mutability**: Functions provided by this trait allow elements to be mutated. Mutable versions of the above features also become available (iterators, access).
 * **in-place modification**.
+
+## Note
+Note also that this crate extends the standard 2D array `[[T; N]; M]`.
 
 ## More
 See [**this**](https://docs.rs/matrixable/0.1.0/matrixable/) documentation for additional informations.
