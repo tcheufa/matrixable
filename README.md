@@ -32,10 +32,13 @@ fn main() {
     
     matrixable::print_rows_debug(&identity);
     println!();
+
     matrixable::print_columns_debug(&identity);
     println!();
+
     matrixable::print_diagonals_debug(&identity);
-    println!();    
+    println!();
+
     println!("Properties:");
     println!("* Square matrix: {}", identity.is_square());
     println!("* Symmetric: {}", identity.is_symmetric());
