@@ -1,6 +1,6 @@
 //! This module contains structs for iterating over matrices.
 //!
-//! These structs also implement [`Index`](std::ops::Index) allowing you to use the `container[index]` notation.
+//! Some of these structs also implement [`Index`](std::ops::Index) allowing you to use the `container[index]` notation.
 //!
 //! # Examples
 //! ```rust
@@ -68,25 +68,24 @@ use std::{
     fmt::Debug,
     iter::FusedIterator,
     marker::PhantomData,
+    collections::VecDeque,
+    
 };
 
-/// TODO
-/// - Add a feature for itertools crate (or even not finally)
-/// - Add a feature for serde crate for serialization of matrixlikes (or even not finally)
-
-//use crate::view::MatrixExtView;
 use crate::{MatrixExt, MatrixMutExt};
 
 macro_rules! iter {
     (
-        $($name:ident { $($mut:ident)? } { $ptr:ident } $matrixTrait:ident $getfn:ident $($start:ident)?),* ;
+        $(#[doc = $doc:expr] $name:ident { $($mut:ident)? } { $ptr:ident } $matrixTrait:ident $getfn:ident $($start:ident)?),* ;
         $get_ij:expr ;
         $incrfn:item ;
         $lenimpl:item ;
         $nextbackimpl:item 
     ) => {
         $(
-            #[derive(Hash, Debug)]
+            #[doc = $doc]
+            /// See its documentation for more.
+            #[derive(Hash, Debug, Copy, Clone)]
             pub struct $name<'a, M: $matrixTrait>
             where M::Element: 'a 
             {
@@ -249,7 +248,15 @@ macro_rules! iter {
 }
 
 
-iter!{Iter {/*no mut */} { const } MatrixExt get, IterMut { mut } { mut } MatrixMutExt get_mut;
+iter!{
+    #[doc =
+    "An iterator over the elements of the matrix.\n\n\
+    This struct is created by the [`iter`](MatrixExt::iter) method on [`MatrixExt`]."]
+    Iter {/*no mut */} { const } MatrixExt get,
+    #[doc = 
+    "An iterator over the elements of the matrix (mutable).\n\n\
+    This struct is created by the [`iter_mut`](MatrixMutExt::iter_mut) method on [`MatrixMutExt`]."]
+    IterMut { mut } { mut } MatrixMutExt get_mut;
     |_m: &M| (0, 0) ;
     fn increment(&self, mut i: usize, mut j: usize) -> (usize, usize) {
         j += 1;
@@ -272,7 +279,15 @@ iter!{Iter {/*no mut */} { const } MatrixExt get, IterMut { mut } { mut } Matrix
     }
 }
 
-iter!{Row {/*no mut */} { const } MatrixExt get row, RowMut { mut } { mut } MatrixMutExt get_mut row;
+iter!{
+    #[doc = 
+    "An iterator over a matrix row.\n\n\
+    This struct is created by the [`row`](MatrixExt::row) method on [`MatrixExt`]."]
+    Row {/*no mut */} { const } MatrixExt get row,
+    #[doc = 
+    "An iterator over a mutable matrix row.\n\n\
+    This struct is created by the [`row_mut`](MatrixMutExt::row_mut) method on [`MatrixMutExt`]."]
+    RowMut { mut } { mut } MatrixMutExt get_mut row;
     |_m: &M, row| (row, 0) ;
     fn increment(&self, i: usize, j: usize) -> (usize, usize) {  
         (i, j+1)
@@ -291,7 +306,15 @@ iter!{Row {/*no mut */} { const } MatrixExt get row, RowMut { mut } { mut } Matr
     }
 }
 
-iter!{Column {/*no mut */} { const } MatrixExt get col, ColumnMut { mut } { mut } MatrixMutExt get_mut col;
+iter!{
+    #[doc = 
+    "An iterator over a matrix column.\n\n\
+    This struct is created by the [`col`](MatrixExt::col) method on [`MatrixExt`]."]
+    Column {/*no mut */} { const } MatrixExt get col,
+    #[doc = 
+    "An iterator over a mutable matrix column.\n\n\
+    This struct is created by the [`col_mut`](MatrixMutExt::col_mut) method on [`MatrixMutExt`]."]
+    ColumnMut { mut } { mut} MatrixMutExt get_mut col;
     |_m: &M, col| (0, col) ;
     fn increment(&self, i: usize, j: usize) -> (usize, usize) {  
         (i + 1, j)
@@ -309,7 +332,15 @@ iter!{Column {/*no mut */} { const } MatrixExt get col, ColumnMut { mut } { mut 
     }
 }
 
-iter!{Diag {/*no mut */} { const } MatrixExt get n, DiagMut { mut } { mut } MatrixMutExt get_mut n;
+iter!{
+    #[doc =
+    "An iterator over a matrix diagonal.\n\n\
+    This struct is created by the [`diag`](MatrixExt::diag) method on [`MatrixExt`]."]
+    Diag {/*no mut */} { const } MatrixExt get n,
+    #[doc =
+    "An iterator over a mutable matrix diagonal.\n\n\
+    This struct is created by the [`diag_mut`](MatrixMutExt::diag_mut) method on [`MatrixMutExt`]."]
+    DiagMut { mut } { mut } MatrixMutExt get_mut n;
     |m: &M, mut n| {
         let lastrow = m.num_rows() - 1;
         if n <= lastrow {
@@ -339,49 +370,6 @@ iter!{Diag {/*no mut */} { const } MatrixExt get n, DiagMut { mut } { mut } Matr
         
         // SAFETY: Nothing else points to or will point to the contents of this iterator.
         self.get(i, j)
-    }
-}
-
-
-impl<'a, M: MatrixExt> Copy for Iter<'a, M>
-where M::Element: 'a {}
-
-impl<'a, M: MatrixExt> Copy for Row<'a, M>
-where M::Element: 'a {}
-
-impl<'a, M: MatrixExt> Copy for Column<'a, M>
-where M::Element: 'a {}
-
-impl<'a, M: MatrixExt> Copy for Diag<'a, M>
-where M::Element: 'a {}
-
-
-
-impl<'a, M: MatrixExt> Clone for Iter<'a, M>
-where M::Element: 'a {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<'a, M: MatrixExt> Clone for Row<'a, M>
-where M::Element: 'a {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<'a, M: MatrixExt> Clone for Column<'a, M>
-where M::Element: 'a {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<'a, M: MatrixExt> Clone for Diag<'a, M>
-where M::Element: 'a {
-    fn clone(&self) -> Self {
-        *self
     }
 }
 
@@ -578,10 +566,233 @@ where
 
         if self.j == self.jmp {
             self.j = 0;
-            self.i += 1;
+            self.i += 1
         }
         
         Some(next_back)  
     }
 }
 impl<I: FusedIterator> FusedIterator for Enumerator<I> {}
+
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct IntoRows<T> {
+    d: Vec<T>,
+    n: usize
+}
+
+pub struct IntoCols<T> {
+    rows: Box<[VecDeque<T>]>,
+}
+
+// DoubleEndedIterator must not be implemented for this struct
+// because of possible risks due to Iterator's next method impl.
+pub struct IntoDiags<T>
+{
+    d: Vec<T>,
+    rows: usize,
+    cols: usize,
+    diag_size: usize,
+    row_start: usize,
+    col_start: usize,
+    tmp_as_last_elem: *const T,
+}
+
+impl<M: MatrixExt> From<M> for IntoRows<M::Element>
+where M: Into<Vec<M::Element>>
+{
+    fn from(value: M) -> Self {
+        Self { 
+            n: value.num_cols(),
+            d: value.into()
+        }
+    }
+}
+
+impl<M: MatrixExt> From<M> for IntoCols<M::Element>
+where M: Into<Vec<M::Element>> 
+{
+    fn from(value: M) -> Self {
+        let (rows, cols) = (value.num_rows(), value.num_cols());
+        let mut v = Vec::with_capacity(rows);
+        let mut into_vec: Vec<_> = value.into();
+        
+        for _ in 0..rows {
+            v.push(into_vec.drain(..cols).collect())
+        }
+
+        Self { rows: v.into() }
+    }
+}
+
+impl<M: MatrixExt> From<M> for IntoDiags<M::Element> 
+where M : Into<Vec<M::Element>>
+{
+    fn from(value: M) -> Self {
+        let (rows, cols) = (value.num_rows(), value.num_cols());
+        Self {
+            rows,
+            cols,
+            row_start: rows - 1,
+            col_start: 0,
+            diag_size: 1,
+            tmp_as_last_elem: value.get(0, cols - 1).unwrap(),
+            d: value.into(),
+        }
+    }
+}
+
+impl<T> Iterator for IntoRows<T> {
+    type Item = Vec<T>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.d.is_empty() {
+            None
+        } else {
+            Some(self.d.drain(..self.n).collect())
+        }
+    }
+}
+
+impl<T> Iterator for IntoCols<T> {
+    type Item = Vec<T>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.rows[0].is_empty() {
+            None
+        } else {
+            let num_rows = self.rows.len();
+
+            let mut v = Vec::with_capacity(num_rows);
+            for i in 0..num_rows {
+                v.push(self.rows[i].pop_front().expect("Vecs must have the same length"));
+            }
+
+            Some(v)
+        }
+    }
+}
+
+impl<T> Iterator for IntoDiags<T> {
+    type Item = Vec<T>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.col_start == self.cols {
+            return None
+        }
+
+        let mut v = Vec::with_capacity(self.diag_size);
+
+        // The last_diag_elem always contain only one element.
+        // We will use this element as a placeholder for no longer usable cells of the matrix.
+        // SAFETY: last_diag_elem element is the last element popped out so it will continue to live till
+        // the end of iteration.
+        for _ in 0..self.diag_size  {
+            v.push(unsafe {
+                self.tmp_as_last_elem.read()
+            })
+        }
+
+        let start = self.row_start * self.cols;
+        let end = start + self.diag_size * self.cols;
+
+        let stepby = self.cols + 1;
+
+        let mut step = 0;
+        let mut i = 0;
+
+        while step < end - start {
+            std::mem::swap(&mut self.d[start..end][step], &mut v[i]);
+            i += 1;
+            step += stepby;
+        }
+
+        let diags_with_same_size_on_axis = std::cmp::max(self.rows, self.cols) - std::cmp::min(self.rows, self.cols) + 1;
+
+        if self.row_start == 0 {
+            self.col_start += 1;
+
+            if self.col_start >= diags_with_same_size_on_axis - 1 {
+                self.diag_size -= 1;
+            }
+        }
+        else {
+            self.row_start -= 1;
+
+            if self.row_start >= diags_with_same_size_on_axis - 1 {
+                self.diag_size += 1;
+            }
+        }
+
+        Some(v)
+    }
+}
+
+impl<T> ExactSizeIterator for IntoRows<T> {
+    fn len(&self) -> usize { self.n }
+}
+impl<T> ExactSizeIterator for IntoCols<T> {
+    fn len(&self) -> usize {  self.rows.len()  }
+}
+impl<T> ExactSizeIterator for IntoDiags<T> {
+    fn len(&self) -> usize { self.row_start }
+}
+
+impl<T> FusedIterator for IntoRows<T> {}
+impl<T> FusedIterator for IntoCols<T> {}
+impl<T> FusedIterator for IntoDiags<T> {}
+
+impl<T> DoubleEndedIterator for IntoRows<T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.d.is_empty() {
+            None
+        } else {
+            let r = self.d.len() / self.n;
+            Some(self.d.split_off(self.n * (r-1)).into())
+        }
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let r: usize = self.d.len() / self.n;
+
+        if n >= r || self.d.is_empty() {
+            None
+        } else {
+            let mut split = self.d.split_off(self.n * (r - n - 1));
+            split.truncate(r);
+            Some(split.into())
+        }
+    }
+}
+impl<T> DoubleEndedIterator for IntoCols<T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.rows[0].is_empty() {
+            None
+        } else {
+            let num_rows = self.rows.len();
+
+            let mut v = Vec::with_capacity(num_rows);
+            for i in 0..num_rows {
+                v.push(self.rows[i].pop_front().expect("Vecs must have the same length"));
+            }
+
+            Some(v)
+        }
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let row_len = self.rows[0].len();
+
+        if n >= row_len || self.rows[0].is_empty() {
+            None
+        } else {
+            let num_rows = self.rows.len();
+
+            let mut v = Vec::with_capacity(num_rows);
+            for i in 0..num_rows {
+                let c = self.rows[i]
+                    .split_off(row_len - n - 1)
+                    .pop_front()
+                    .unwrap();
+                v.push(c);
+            }
+            Some(v)
+        }
+    }
+}

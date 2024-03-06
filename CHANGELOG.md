@@ -16,3 +16,19 @@
 * Updated example in `README.md` and added output.
 
 * Updated `Cargo.toml` file
+
+
+# Version 0.2.0 (March 06, 2024)
+
+* Added structs: `IntoRows`, `IntoCols` and `IntoDiags`, and their associated functions: `into_rows`, `into_cols`, `into_diags`.
+
+* Added method `into_iter`.
+
+* Added unchecked (unsafe) version of `row`, `col`, `diag`, `row_mut`, `col_mut` and `diag_mut` methods.
+
+* Put description on `Row`, `Column`, `Diag`, `RowMut`, `ColumnMut` and `DiagMut` (The 1 dimensional iterators).
+
+* Changed manual implementation of `Copy` and `Clone` to derive macro on 1D iterators (hope that will never cause a crash).
+
+* Updated `README` file: added properties display.
+
