@@ -37,7 +37,7 @@
 
 ## 🚨 **BREAKING CHANGES**
 
-* Removed method `into_iter` and changed clause `Into<Vec<Self::Element>>` into `IntoIterator<Self::Element>` on methods `into_rows`, `into_cols` and `into_diags`.
+* Removed method `into_iter` and changed clause `Into<Vec<Self::Element>>` into `Sized + IntoIterator<Self::Element>` on methods `into_rows`, `into_cols` and `into_diags`.
 
 * Added clause `<I as IntoIterator>::IntoIter: ExactSizeIterator` inside `from_iter` method from `MatrixExtFromIter` trait.
 
