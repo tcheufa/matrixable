@@ -32,3 +32,15 @@
 
 * Updated `README` file: added properties display.
 
+
+# Version 0.3.0 (March 13, 2024) 
+
+## 🚨 **BREAKING CHANGES**
+
+* Removed method `into_iter` and changed clause `Into<Vec<Self::Element>>` into `IntoIterator<Self::Element>` on methods `into_rows`, `into_cols` and `into_diags`.
+
+* Added clause `<I as IntoIterator>::IntoIter: ExactSizeIterator` inside `from_iter` method from `MatrixExtFromIter` trait.
+
+* Removed the `Copy` constraint on generic parameter `T` inside `TransformStrategy<[[T; N]; M]> for Transpose` implementation
+
+* Added `no_std` support, making now use of `std` module optional.

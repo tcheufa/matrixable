@@ -105,8 +105,9 @@ Once implemented `MatrixMutExt` structs inherits features from `MatrixExt` plus 
 * **mutability**: Functions provided by this trait allow elements to be mutated. Mutable versions of the above features also become available (iterators, access).
 * **in-place modification**.
 
-## Note
-Note also that this crate extends the standard 2D array `[[T; N]; M]`.
+## Important
+* Note also that this crate extends the standard 2D array `[[T; N]; M]`.
+* This crate support `no_std` environments since ver`0.3.0`.
 
 ## More
 See [**this**](https://docs.rs/matrixable/0.1.0/matrixable/) documentation for additional informations.
