@@ -1,3 +1,5 @@
+#![no_std]
+
 //! This library provides traits and structs that will extend the capacities of a matrix-like struct.
 //!
 //! A matrix implementing [`MatrixExt`] is by default in *[`Row Major Order`]*, but you can still change it using transpose access.
@@ -5,25 +7,36 @@
 //! Note also that this crate extends the standard 2D array `[[T; N]; M]`.
 //!
 //! [`Row Major Order`]: https://en.m.wikipedia.org/wiki/Row-_and_column-major_order
+//!
+//! ### TODO:
+//! - Create a feature for enabling implementation for `[[T; N]; M]` (disabled by default). 
+//! - Doctests for `into_*` methods and `Into*` structs.
+//! - Add sorting method for `MatrixMutExt`s.
+
+extern crate alloc;
 
 pub mod access;
-pub mod iterators;
+pub mod iterators;  
 pub mod req;
 pub mod strategies;
 
 mod impls;
 
-pub fn print_rows_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
+
+#[cfg(feature = "std")]
+pub fn print_rows_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
     println!("Rows"); 
     p.rows().enumerate().for_each(|(i, row)| println!("{i}: {:?}", row.collect::<Vec<_>>()))
 }
 
-pub fn print_columns_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
+#[cfg(feature = "std")]
+pub fn print_columns_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
     println!("Columns");
     p.cols().enumerate().for_each(|(i, col)| println!("{i}: {:?}", col.collect::<Vec<_>>()))
 }
 
-pub fn print_diagonals_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: std::fmt::Debug {
+#[cfg(feature = "std")]
+pub fn print_diagonals_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
     println!("Diagonals");
     p.diags().enumerate().for_each(|(i, diag)| println!("{i}: {:?}", diag.collect::<Vec<_>>()))
 }
@@ -537,7 +550,7 @@ pub trait MatrixExt
     /// ```
     fn main_diag(&self) -> Diag<'_, Self> 
     where Self: Sized {
-        let n = std::cmp::min(self.num_rows(), self.num_cols());
+        let n = ::core::cmp::min(self.num_rows(), self.num_cols());
         Diag::new(self, n.saturating_sub(1))
     }
     
@@ -691,39 +704,33 @@ pub trait MatrixExt
     }
     
     
-    /// Converts a matrix into an iterator over its elements.
-    /// # Important
-    /// Struct implementing the trait `MatrixExt` and `Into<Vec<MatrixExt::Element>>` must ensure 
-    /// that converting matrix into a `Vec` does not change the order of elements (follows the *Row Major Order*).
-    fn into_iter(self) -> std::vec::IntoIter<Self::Element>
-    where Self: Into<Vec<Self::Element>> { 
-        self.into().into_iter()
-    }       
-    
     /// Converts a matrix into an iterator over rows of the matrix.
     /// # Important
-    /// Struct implementing the trait `MatrixExt` and `Into<Vec<MatrixExt::Element>>` must ensure 
-    /// that converting matrix into a `Vec` does not change the order of elements (follows the *Row Major Order*).
+    /// Struct implementing the trait `MatrixExt` and `IntoIterator<Item = MatrixExt::Element>` must ensure 
+    /// that conversion does not change the order of elements (follows the *Row Major Order*).
+    /// TODO: Example
     fn into_rows(self) -> IntoRows<Self::Element> 
-    where Self: Into<Vec<Self::Element>> { 
+    where Self: Sized + IntoIterator<Item = Self::Element> {
         IntoRows::from(self) 
     }
 
     /// Converts a matrix into an iterator over columns of the matrix.
     /// # Important
-    /// Struct implementing the trait `MatrixExt` and `Into<Vec<MatrixExt::Element>>` must ensure 
-    /// that converting matrix into a `Vec` does not change the order of elements (follows the *Row Major Order*).
+    /// Struct implementing the trait `MatrixExt` and `IntoIterator<Item = MatrixExt::Element>` must ensure 
+    /// that conversion does not change the order of elements (follows the *Row Major Order*).
+    /// TODO: Example
     fn into_cols(self) -> IntoCols<Self::Element> 
-    where Self: Into<Vec<Self::Element>> {
+    where Self: Sized + IntoIterator<Item = Self::Element> {
           IntoCols::from(self) 
     }
 
     /// Converts a matrix into an iterator over diagonals of the matrix.
     /// # Important
-    /// Struct implementing the trait `MatrixExt` and `Into<Vec<MatrixExt::Element>>` must ensure 
-    /// that converting matrix into a `Vec` does not change the order of elements (follows the *Row Major Order*).
+    /// Struct implementing the trait `MatrixExt` and `IntoIterator<Item = MatrixExt::Element>` must ensure 
+    /// that conversion does not change the order of elements (follows the *Row Major Order*).
+    /// TODO: Example
     fn into_diags(self) -> IntoDiags<Self::Element>
-    where Self: Into<Vec<Self::Element>> { 
+    where Self: Sized + IntoIterator<Item = Self::Element> {
         IntoDiags::from(self) 
     }
 
@@ -846,7 +853,13 @@ pub trait MatrixExt
         }
         
         let limit = r * c  -  1;
+        
+        #[cfg(feature = "std")]
         let mut hash = std::collections::HashSet::new();
+
+
+        #[cfg(not(feature = "std"))]
+        let mut hash = alloc::vec::Vec::new();
 
         let mut dest: usize;
         for n in 1..limit {
@@ -856,7 +869,12 @@ pub trait MatrixExt
                 continue;
             }
 
+            
+            #[cfg(feature = "std")]
             hash.insert(dest);
+            
+            #[cfg(not(feature = "std"))]
+            hash.push(dest);
 
             let (i, j) = (n / c, n % c);
             let (i_dest, j_dest) = (dest / c, dest % c);
@@ -896,10 +914,10 @@ pub trait MatrixExt
     fn is_skew_symmetric(&self) -> bool 
     where 
         Self: Sized,
-        for<'a> &'a Self::Element: std::ops::Neg,
-        for<'a> Self::Element: std::cmp::PartialEq<<&'a Self::Element as std::ops::Neg>::Output>
+        for<'a> &'a Self::Element: ::core::ops::Neg,
+        for<'a> Self::Element: ::core::cmp::PartialEq<<&'a Self::Element as ::core::ops::Neg>::Output>
     {
-        use std::ops::Neg;
+        use ::core::ops::Neg;
         self.access(crate::strategies::Transpose).iter()
             .zip(self.iter())
             .all(|(&ref x, &ref y)| *x == y.neg())
@@ -1324,7 +1342,7 @@ pub trait MatrixMutExt: MatrixExt {
         if a == b { return }
         let a: *mut Self::Element = self.get_mut(a.0, a.1).unwrap();
         let b: *mut Self::Element = self.get_mut(b.0, b.1).unwrap();
-        unsafe { std::mem::swap(&mut *a, &mut *b) };
+        unsafe { ::core::mem::swap(&mut *a, &mut *b) };
     }
 
     /// Swaps two elements in the matrix identified by their linear position following the *Row Major Order*.
@@ -1364,7 +1382,7 @@ pub trait MatrixMutExt: MatrixExt {
         if a == b { return }
         let a: *mut Self::Element = self.get_nth_mut(a).unwrap();
         let b: *mut Self::Element = self.get_nth_mut(b).unwrap();
-        unsafe { std::mem::swap(&mut *a, &mut *b) };
+        unsafe { ::core::mem::swap(&mut *a, &mut *b) };
     }
     
     /// Returns an iterator that allows modifying each element.

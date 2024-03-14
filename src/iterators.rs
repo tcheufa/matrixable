@@ -1,6 +1,6 @@
 //! This module contains structs for iterating over matrices.
 //!
-//! Some of these structs also implement [`Index`](std::ops::Index) allowing you to use the `container[index]` notation.
+//! Some of these structs also implement [`Index`](::core::ops::Index) allowing you to use the `container[index]` notation.
 //!
 //! # Examples
 //! ```rust
@@ -42,7 +42,7 @@
 //! ```
 //! <br/>
 //!
-//! It may happen you just need a unique element. In that case you will rather use [`.nth()`](std::iter::Iterator::nth) 
+//! It may happen you just need a unique element. In that case you will rather use [`.nth()`](::core::iter::Iterator::nth) 
 //! from the standard [`Iterator`] trait.
 //!
 //! ```rust
@@ -64,13 +64,19 @@
 //! 
 //! assert_eq!(Some(&mut 'z'), m.row_mut(2).unwrap().nth(1));
 //! ```
-use std::{
+
+use ::core::{
     fmt::Debug,
     iter::FusedIterator,
     marker::PhantomData,
-    collections::VecDeque,
     
 };
+
+
+use alloc::vec::Vec;
+use alloc::boxed::Box;
+
+use alloc::collections::VecDeque;
 
 use crate::{MatrixExt, MatrixMutExt};
 
@@ -172,7 +178,7 @@ macro_rules! iter {
             /// Allows creating 2D arrays from this iterator.
             impl<'a, M: $matrixTrait, T, F> FromIterator<$name<'a, M>> for Box<[F]>
             where
-                F: std::ops::Deref<Target = [T]>,
+                F: ::core::ops::Deref<Target = [T]>,
                 F: FromIterator<<$name<'a, M> as Iterator>::Item>,
                 M::Element: 'a
             {
@@ -186,7 +192,7 @@ macro_rules! iter {
                         
             impl<'a, M: $matrixTrait, T, F> FromIterator<$name<'a, M>> for Vec<F>
             where
-                F: std::ops::Deref<Target = [T]>,
+                F: ::core::ops::Deref<Target = [T]>,
                 F: FromIterator<<$name<'a, M> as Iterator>::Item>,
                 M::Element: 'a
             {
@@ -198,7 +204,7 @@ macro_rules! iter {
                 }
             }
             
-            impl<'a, M: $matrixTrait> std::ops::Index<usize> for $name<'a, M>
+            impl<'a, M: $matrixTrait> ::core::ops::Index<usize> for $name<'a, M>
             where 
                 M::Element: 'a
             {
@@ -219,7 +225,7 @@ macro_rules! iter {
             }
             
             $(
-                impl<'a, M: $matrixTrait> std::ops::IndexMut<usize> for $name<'a, M>
+                impl<'a, M: $matrixTrait> ::core::ops::IndexMut<usize> for $name<'a, M>
                 where 
                     M::Element: 'a
                 {
@@ -598,23 +604,23 @@ pub struct IntoDiags<T>
 }
 
 impl<M: MatrixExt> From<M> for IntoRows<M::Element>
-where M: Into<Vec<M::Element>>
+where M: IntoIterator<Item = M::Element>,
 {
     fn from(value: M) -> Self {
         Self { 
             n: value.num_cols(),
-            d: value.into()
+            d: value.into_iter().collect()
         }
     }
 }
 
 impl<M: MatrixExt> From<M> for IntoCols<M::Element>
-where M: Into<Vec<M::Element>> 
+where M: IntoIterator<Item = M::Element>,
 {
     fn from(value: M) -> Self {
         let (rows, cols) = (value.num_rows(), value.num_cols());
         let mut v = Vec::with_capacity(rows);
-        let mut into_vec: Vec<_> = value.into();
+        let mut into_vec: Vec<_> = value.into_iter().collect();
         
         for _ in 0..rows {
             v.push(into_vec.drain(..cols).collect())
@@ -625,7 +631,7 @@ where M: Into<Vec<M::Element>>
 }
 
 impl<M: MatrixExt> From<M> for IntoDiags<M::Element> 
-where M : Into<Vec<M::Element>>
+where M: IntoIterator<Item = M::Element>,
 {
     fn from(value: M) -> Self {
         let (rows, cols) = (value.num_rows(), value.num_cols());
@@ -636,7 +642,7 @@ where M : Into<Vec<M::Element>>
             col_start: 0,
             diag_size: 1,
             tmp_as_last_elem: value.get(0, cols - 1).unwrap(),
-            d: value.into(),
+            d: value.into_iter().collect(),
         }
     }
 }
@@ -698,12 +704,12 @@ impl<T> Iterator for IntoDiags<T> {
         let mut i = 0;
 
         while step < end - start {
-            std::mem::swap(&mut self.d[start..end][step], &mut v[i]);
+            ::core::mem::swap(&mut self.d[start..end][step], &mut v[i]);
             i += 1;
             step += stepby;
         }
 
-        let diags_with_same_size_on_axis = std::cmp::max(self.rows, self.cols) - std::cmp::min(self.rows, self.cols) + 1;
+        let diags_with_same_size_on_axis = ::core::cmp::max(self.rows, self.cols) - ::core::cmp::min(self.rows, self.cols) + 1;
 
         if self.row_start == 0 {
             self.col_start += 1;

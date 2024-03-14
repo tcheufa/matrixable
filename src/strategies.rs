@@ -1,10 +1,15 @@
 //! Structures implementing [`AccessStrategy`], [`InPlace`] and/or [`TransformStrategy`] traits.
 
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::boxed::Box;
+
+
 use crate::{ MatrixExt, MatrixMutExt };
 use crate::access::Observer;
 
-use std::ops::Deref;
-use std::ops::{RangeBounds, RangeInclusive};
+use ::core::ops::Deref;
+use ::core::ops::{RangeBounds, RangeInclusive};
 
 pub use crate::req::{ AccessStrategy, TransformStrategy, SwapsDimensions, InPlace };
 
@@ -336,7 +341,6 @@ pub struct ShiftBack(pub usize);
 ///    [ 0, 1, 2 ],
 ///    [ 3, 4, 5 ]
 /// ];
-/// matrixable::print_rows_debug(&access);
 /// assert!(expected.iter().eq(access.iter()));
 /// ```
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -538,8 +542,13 @@ impl Transpose {
         let mut next ;
         let mut cycle_begin;
     
-        use std::collections::HashSet;
-        let mut moved: HashSet<usize> = HashSet::new();
+//         use alloc::collections::HashSet;
+        
+        #[cfg(not(feature = "std"))]
+        let mut moved: Vec<usize> = vec![];
+        
+        #[cfg(feature = "std")]
+        let mut moved: HashSet<usize> = std::collections::HashSet::new();
 
         let mut i = 1;
         while i < limit {
@@ -548,7 +557,13 @@ impl Transpose {
             loop {
                 next = (i * r) % limit;
                 m.swapn(toreplace, next);
+                
+                #[cfg(not(feature = "std"))]
+                moved.push(i);
+                
+                #[cfg(feature = "std")]
                 moved.insert(i);
+                
                 
                 i = next;
                 
@@ -569,7 +584,7 @@ impl Reverse {
     /// 
     /// # Panics
     /// Panics if `start` or `end` are out of bounds.
-    pub fn rev<M: MatrixMutExt>(&self, m: &mut M, range: std::ops::Range<usize>) {
+    pub fn rev<M: MatrixMutExt>(&self, m: &mut M, range: ::core::ops::Range<usize>) {
         let mid = (range.start + range.end) / 2;
         for i in range.start..mid {
             m.swapn(i, range.end + range.start - i - 1);
@@ -580,7 +595,7 @@ impl Reverse {
     ///
     /// # Panics
     /// Panics if `start` or `end` are out of bounds.
-    pub fn rev2<M: MatrixMutExt>(&self, m: &mut M, range: std::ops::Range<(usize, usize)>) {
+    pub fn rev2<M: MatrixMutExt>(&self, m: &mut M, range: ::core::ops::Range<(usize, usize)>) {
         let (start, end) = (m.index_from(range.start), m.index_from(range.end));
         self.rev(m, start..end);
     }
@@ -590,7 +605,7 @@ impl<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>> SubMatrix<Rows, Cols>
 {
     fn get_range<R: RangeBounds<usize>>(len: usize, r: &R) 
         -> RangeInclusive<usize> {
-        use std::ops::Bound;
+        use ::core::ops::Bound;
         
         let start = match r.start_bound() {
             Bound::Unbounded => 0,
