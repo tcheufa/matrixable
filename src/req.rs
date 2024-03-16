@@ -21,7 +21,50 @@ pub trait MatrixExtFromIter<A> {
 
 
 /// A trait for in-place modification of matrices.
-pub trait InPlace<M: MatrixExt>: Sized {
+///
+/// # Example
+/// ```
+/// use matrixable::req::InPlace;
+/// use matrixable::MatrixMutExt;
+///
+/// pub struct SortBy<T> (fn(&T, &T) -> bool);
+///
+/// impl<M: MatrixMutExt> InPlace<M> for SortBy<M::Element> {
+///     fn in_place(&self, m: &mut M) {
+///         let mut im;
+///         let mut min_or_max;
+///         let mut cmp;
+///
+///         for i in 0..(m.size() - 1) {
+///             im = i;
+///             min_or_max = m.get_nth(i).unwrap();
+///             for j in (i+1)..m.size() {
+///                 cmp = m.get_nth(j).unwrap();
+///                 if !(self.0)(min_or_max, cmp) {
+///                       im = j;
+///                       min_or_max = cmp;
+///                 }
+///             }
+///             m.swapn(im, i);
+///         }
+///     }
+/// } 
+///
+/// let mut m = [ 
+///     [4,  5,  6],
+///     [9,  1, 20],
+///     [4, 12, -1]
+/// ];
+///
+/// m.in_place(SortBy(|a, b| a < b));
+/// 
+/// assert_eq!(m, [
+///     [-1,  1,  4],
+///     [ 4,  5,  6],
+///     [ 9, 12, 20]
+/// ]);
+/// ``` 
+pub trait InPlace<M: MatrixMutExt>: Sized {
     fn in_place(&self, m: &mut M);
 }
 

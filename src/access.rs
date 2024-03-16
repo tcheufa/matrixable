@@ -30,8 +30,8 @@ pub struct AccessMut<'a, M: MatrixExt, S: AccessStrategy<M>>{
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Default, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct Observer {
-    rows: usize,
-    cols: usize
+    pub rows: usize,
+    pub cols: usize
 }
 
 // ### Self Implementation
@@ -52,7 +52,7 @@ impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> Access<'a, M, S> {
         M: Clone,
         <M as MatrixExt>::Element: Clone
     {
-        self.matrix.duplicate()
+        self.matrix.clone()
     }
 }
 
@@ -66,7 +66,7 @@ impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> AccessMut<'a, M, S> {
         M: Clone,
         <M as MatrixExt>::Element: Clone
     {
-        self.matrix.duplicate()
+        self.matrix.clone()
     }
 }
 
