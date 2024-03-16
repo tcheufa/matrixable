@@ -83,7 +83,7 @@ use crate::{MatrixExt, MatrixMutExt};
 macro_rules! iter {
     (
         $(#[doc = $doc:expr] $name:ident { $($mut:ident)? } { $ptr:ident } $matrixTrait:ident $getfn:ident $($start:ident)?),* ;
-        $get_ij:expr ;
+        $get_bounds:expr ;
         $incrfn:item ;
         $lenimpl:item ;
         $nextbackimpl:item 
@@ -92,12 +92,11 @@ macro_rules! iter {
             #[doc = $doc]
             /// See its documentation for more.
             #[derive(Hash, Debug, Copy, Clone)]
-            pub struct $name<'a, M: $matrixTrait>
-            where M::Element: 'a 
+            pub struct $name<'a, M: $matrixTrait + 'a> 
             {
                 m: *$ptr M,
                 i: usize,
-                j: usize,
+                irev: usize,
                 _marker: PhantomData<&'a M>,
             }
         
@@ -105,19 +104,24 @@ macro_rules! iter {
             where M::Element: 'a 
             {
                 pub(crate) fn new(m: &'a $($mut)? M $(, $start: usize)? ) -> Self {
-                    let get_start = $get_ij;
-                    let (i, j) = get_start(m $(, $start)?);
-                    Self { m, i, j, _marker: PhantomData }
+                    let get_start = $get_bounds;
+                    let (i, irev) = get_start(m $(, $start)?);
+                    Self { m, i, irev, _marker: PhantomData }
                 }
                 
                 #[inline(always)]
                 fn use_matrix(&$($mut)? self) -> &'a $($mut)? M {
                     unsafe { (&$($mut)? *self.m) }
+                }         
+                
+                #[inline(always)]
+                fn matrix(&self) -> &'a M {
+                    unsafe { (&*self.m) }
                 } 
                 
                 #[inline(always)]
-                fn get(&$($mut)? self, i: usize, j: usize) -> Option<&'a $($mut)? M::Element> {
-                    self.use_matrix().$getfn(i, j)
+                fn get_nth(&$($mut)? self, i: usize) -> Option<&'a $($mut)? M::Element> {
+                    self.use_matrix().$getfn(i)
                 }
                 
                 #[inline(always)]
@@ -130,13 +134,14 @@ macro_rules! iter {
             {
                 type Item = &'a $($mut)? M::Element;
                     fn next(&mut self) -> Option<Self::Item> {
-                    let (i, j) = (self.i, self.j);
-                    let next = self.get(i, j)?;
-                    
-                    (self.i, self.j) = self.increment(self.i, self.j);
+                    if self.i > self.irev {
+                        return None
+                    }
+                    let i = self.i;    
+                    self.i = self.increment(i);
 
                     // SAFETY: Nothing else points to or will point to the contents of this iterator.
-                    Some(next)
+                    self.get_nth(i)
                 }
             }
             
@@ -149,7 +154,6 @@ macro_rules! iter {
             impl<'a, M: $matrixTrait> DoubleEndedIterator for $name<'a, M> {
                 $nextbackimpl
             }
-            
             
             impl<'a, M: $matrixTrait> PartialEq for $name<'a, M>
             where
@@ -203,7 +207,7 @@ macro_rules! iter {
                     iter.into_iter().map(|c| c.collect::<F>()).collect()
                 }
             }
-            
+           
             impl<'a, M: $matrixTrait> ::core::ops::Index<usize> for $name<'a, M>
             where 
                 M::Element: 'a
@@ -213,14 +217,11 @@ macro_rules! iter {
                 /// # Panics
                 /// Panics if the index is out of bounds.
                 fn index(&self, idx: usize) -> &Self::Output {
-                    let (mut i, mut j) = (self.i, self.j);
-                    
+                    let mut i = self.i;
                     for _ in 0..idx {
-                        (i, j) = self.increment(i, j);
+                        i = self.increment(i);
                     }
-                    
-                    let m = unsafe { &*self.m };
-                    m.get(i, j).unwrap()
+                    self.matrix().get_nth(i).unwrap()
                 }
             }
             
@@ -232,13 +233,11 @@ macro_rules! iter {
                     /// # Panics
                     /// Panics if the index is out of bounds.
                     fn index_mut(&$mut self, idx: usize) -> &mut Self::Output {
-                        let (mut i, mut j) = (self.i, self.j);
-                    
+                        let mut i = self.i;
                         for _ in 0..idx {
-                            (i, j) = self.increment(i, j);
+                            i = self.increment(i);
                         }
-                        
-                        self.use_matrix().get_mut(i, j).unwrap()
+                        self.get_nth(i).unwrap()
                     }
                 }
             )?
@@ -248,40 +247,33 @@ macro_rules! iter {
             
             unsafe impl<'a, M: $matrixTrait> Sync for $name<'a, M>
             where M: Sync, M::Element: Sync {}
-
         )*
     }
 }
-
 
 iter!{
     #[doc =
     "An iterator over the elements of the matrix.\n\n\
     This struct is created by the [`iter`](MatrixExt::iter) method on [`MatrixExt`]."]
-    Iter {/*no mut */} { const } MatrixExt get,
+    Iter {/*no mut */} { const } MatrixExt get_nth,
     #[doc = 
     "An iterator over the elements of the matrix (mutable).\n\n\
     This struct is created by the [`iter_mut`](MatrixMutExt::iter_mut) method on [`MatrixMutExt`]."]
-    IterMut { mut } { mut } MatrixMutExt get_mut;
-    |_m: &M| (0, 0) ;
-    fn increment(&self, mut i: usize, mut j: usize) -> (usize, usize) {
-        j += 1;
-        if j == unsafe { &*self.m }.num_cols() {
-            j = 0;
-            i += 1;
-        }
-        (i, j)
+    IterMut { mut } { mut } MatrixMutExt get_nth_mut;
+    |m: &M| (0, m.size().saturating_sub(1)) ;
+    fn increment(&self, i: usize) -> usize {
+        i + 1
     } ;
-    fn len(&self) -> usize {  unsafe {&*self.m}.size()  } ;
+    fn len(&self) -> usize { self.matrix().size()  } ;
     fn next_back(&mut self) -> Option<Self::Item> {
-        let m = self.use_matrix();
-        let (rows, cols) = m.dimensions();
-        let (i, j) = (rows - self.i - 1, cols - self.j - 1);
-        
-        (self.i, self.j) = self.increment(self.i, self.j);
+        if self.i > self.irev {
+            return None
+        }
+        let j = self.irev;
+        self.irev -= 1;
         
         // SAFETY: Nothing else points to or will point to the contents of this iterator.
-        self.get(i, j)
+        self.get_nth(j)
     }
 }
 
@@ -289,26 +281,29 @@ iter!{
     #[doc = 
     "An iterator over a matrix row.\n\n\
     This struct is created by the [`row`](MatrixExt::row) method on [`MatrixExt`]."]
-    Row {/*no mut */} { const } MatrixExt get row,
+    Row {/*no mut */} { const } MatrixExt get_nth irow,
     #[doc = 
     "An iterator over a mutable matrix row.\n\n\
     This struct is created by the [`row_mut`](MatrixMutExt::row_mut) method on [`MatrixMutExt`]."]
-    RowMut { mut } { mut } MatrixMutExt get_mut row;
-    |_m: &M, row| (row, 0) ;
-    fn increment(&self, i: usize, j: usize) -> (usize, usize) {  
-        (i, j+1)
+    RowMut { mut } { mut } MatrixMutExt get_nth_mut irow;
+    |m: &M, row| {
+        let rlen = m.row_len();
+        let i = row * rlen;
+        (i, i + rlen - 1)
     } ;
-    fn len(&self) -> usize {  unsafe {&*self.m}.row_len()  } ;
+    fn increment(&self, i: usize) -> usize {  
+        i + 1
+    } ;
+    fn len(&self) -> usize {  self.matrix().row_len()  } ;
     fn next_back(&mut self) -> Option<Self::Item> {
-        let m = self.use_matrix();
-        let cols = m.num_cols();
-        let (i, j) = (self.i, cols - self.j - 1);
-        let next = self.get(i, j)?;
-        
-        (self.i, self.j) = self.increment(self.i, self.j);
+        if self.i > self.irev {
+            return None
+        }
+        let j = self.irev;
+        self.irev -= 1;
         
         // SAFETY: Nothing else points to or will point to the contents of this iterator.
-        Some(next)
+        self.get_nth(j)
     }
 }
 
@@ -316,25 +311,28 @@ iter!{
     #[doc = 
     "An iterator over a matrix column.\n\n\
     This struct is created by the [`col`](MatrixExt::col) method on [`MatrixExt`]."]
-    Column {/*no mut */} { const } MatrixExt get col,
+    Column {/*no mut */} { const } MatrixExt get_nth icol,
     #[doc = 
     "An iterator over a mutable matrix column.\n\n\
     This struct is created by the [`col_mut`](MatrixMutExt::col_mut) method on [`MatrixMutExt`]."]
-    ColumnMut { mut } { mut} MatrixMutExt get_mut col;
-    |_m: &M, col| (0, col) ;
-    fn increment(&self, i: usize, j: usize) -> (usize, usize) {  
-        (i + 1, j)
+    ColumnMut { mut } { mut} MatrixMutExt get_nth_mut icol;
+    |m: &M, col| {
+        let (rows, cols) = m.dimensions();
+        (col, (rows * cols) - cols.saturating_sub(1))
+    } ;
+    fn increment(&self, i: usize) -> usize {  
+        i + self.matrix().row_len()
     } ; 
-    fn len(&self) -> usize { unsafe {&*self.m}.col_len()  } ;
+    fn len(&self) -> usize { self.matrix().col_len()  } ;
     fn next_back(&mut self) -> Option<Self::Item> {
-        let m = self.use_matrix();
-        let rows = m.num_rows();
-        let (i, j) = (rows - self.i - 1, self.j);
+        if self.i > self.irev {
+            return None
+        }
+        let j = self.irev;
+        self.irev -= self.use_matrix().row_len();
         
-        (self.i, self.j) = self.increment(self.i, self.j);
-
         // SAFETY: Nothing else points to or will point to the contents of this iterator.
-        self.get(i, j)
+        self.get_nth(j)
     }
 }
 
@@ -342,40 +340,57 @@ iter!{
     #[doc =
     "An iterator over a matrix diagonal.\n\n\
     This struct is created by the [`diag`](MatrixExt::diag) method on [`MatrixExt`]."]
-    Diag {/*no mut */} { const } MatrixExt get n,
+    Diag {/*no mut */} { const } MatrixExt get_nth n,
     #[doc =
     "An iterator over a mutable matrix diagonal.\n\n\
     This struct is created by the [`diag_mut`](MatrixMutExt::diag_mut) method on [`MatrixMutExt`]."]
-    DiagMut { mut } { mut } MatrixMutExt get_mut n;
+    DiagMut { mut } { mut } MatrixMutExt get_nth_mut n;
     |m: &M, mut n| {
-        let lastrow = m.num_rows() - 1;
-        if n <= lastrow {
-            (lastrow - n, 0) 
+        let (rows, cols) = match m.dimensions() {
+            (_, 0) | (0, _) => return (0, 1),
+            (rows, cols) => (rows, cols)
+        } ;
+        let diag_len = m.diag_len(n);
+        let main_diag = rows - 1;
+        if n < main_diag {
+            n = main_diag - n;
+            (
+                n * cols,
+                n + cols * (diag_len + 1), 
+            )
         } else {
-            n = n - lastrow;
-            (0, n)
+            n = n - main_diag;
+            (
+                n,
+                n + cols * (diag_len + 1), 
+            )
         }
-    };
-    fn increment(&self, i: usize, j: usize) -> (usize, usize) {  
-        (i + 1, j + 1)
-    }; 
-    fn len(&self) -> usize { 
-        let m = unsafe { &*self.m };
-        let mut j = 0;
-        while let false = m.check(self.i, j) {
-            j += 1;
-        }
-        j
-    };
-    fn next_back(&mut self) -> Option<Self::Item> {
-        let m = self.use_matrix();
-        let (rows, cols) = m.dimensions();
-        let (i, j) = (rows - self.i - 1, cols - self.j - 1);
+    } ;
+    fn increment(&self, i: usize) -> usize {
+        let m = self.matrix();
+        let (mut i, mut j) = m.subscripts_from(i);
+        i += 1;
+        j += 1;
         
-        (self.i, self.j) = self.increment(self.i, self.j);
+        if m.check(i, j) {
+            m.index_from((i, j))
+        }
+        else {
+            // Stop a further call to `next` method by passing value that ends iteration
+            //(iteration goes until self.i > self.irev).
+            self.irev + 1
+        }
+    }; 
+    fn len(&self) -> usize {  self.matrix().diag_len(self.i) };
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.i > self.irev {
+            return None
+        }
+        let j = self.irev;
+        self.irev -= self.use_matrix().row_len() + 1; 
         
         // SAFETY: Nothing else points to or will point to the contents of this iterator.
-        self.get(i, j)
+        self.get_nth(j)
     }
 }
 
@@ -603,24 +618,26 @@ pub struct IntoDiags<T>
     tmp_as_last_elem: *const T,
 }
 
-impl<M: MatrixExt> From<M> for IntoRows<M::Element>
-where M: IntoIterator<Item = M::Element>,
+impl<M: MatrixExt, I> From<M> for IntoRows<M::Element>
+where M: IntoIterator<Item = I>,
+I: IntoIterator<Item = M::Element>,
 {
     fn from(value: M) -> Self {
         Self { 
             n: value.num_cols(),
-            d: value.into_iter().collect()
+            d: value.into_iter().flatten().collect()
         }
     }
 }
 
-impl<M: MatrixExt> From<M> for IntoCols<M::Element>
-where M: IntoIterator<Item = M::Element>,
+impl<M: MatrixExt, I> From<M> for IntoCols<M::Element>
+where M: IntoIterator<Item = I>,
+I: IntoIterator<Item = M::Element>,
 {
     fn from(value: M) -> Self {
         let (rows, cols) = (value.num_rows(), value.num_cols());
         let mut v = Vec::with_capacity(rows);
-        let mut into_vec: Vec<_> = value.into_iter().collect();
+        let mut into_vec: Vec<_> = value.into_iter().flatten().collect();
         
         for _ in 0..rows {
             v.push(into_vec.drain(..cols).collect())
@@ -630,8 +647,9 @@ where M: IntoIterator<Item = M::Element>,
     }
 }
 
-impl<M: MatrixExt> From<M> for IntoDiags<M::Element> 
-where M: IntoIterator<Item = M::Element>,
+impl<M: MatrixExt, I> From<M> for IntoDiags<M::Element>
+where M: IntoIterator<Item = I>,
+I: IntoIterator<Item = M::Element>,
 {
     fn from(value: M) -> Self {
         let (rows, cols) = (value.num_rows(), value.num_cols());
@@ -642,7 +660,7 @@ where M: IntoIterator<Item = M::Element>,
             col_start: 0,
             diag_size: 1,
             tmp_as_last_elem: value.get(0, cols - 1).unwrap(),
-            d: value.into_iter().collect(),
+            d: value.into_iter().flatten().collect(),
         }
     }
 }
@@ -675,6 +693,7 @@ impl<T> Iterator for IntoCols<T> {
         }
     }
 }
+
 
 impl<T> Iterator for IntoDiags<T> {
     type Item = Vec<T>;

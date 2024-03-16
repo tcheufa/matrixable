@@ -62,4 +62,3 @@ impl<T, const N: usize> InPlace<[[T; N]; N]> for Transpose {
         }
     }
 }
-

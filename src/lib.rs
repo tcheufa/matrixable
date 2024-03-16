@@ -7,11 +7,56 @@
 //! Note also that this crate extends the standard 2D array `[[T; N]; M]`.
 //!
 //! [`Row Major Order`]: https://en.m.wikipedia.org/wiki/Row-_and_column-major_order
-//!
-//! ### TODO:
-//! - Create a feature for enabling implementation for `[[T; N]; M]` (disabled by default). 
-//! - Doctests for `into_*` methods and `Into*` structs.
-//! - Add sorting method for `MatrixMutExt`s.
+//! 
+//! ## Example 
+//! ```rust
+//! extern crate matrixable;
+//! use matrixable::MatrixExt;
+//! use std;
+//! 
+//! struct IdentityMatrix { size: usize }
+//! 
+//! impl MatrixExt for IdentityMatrix {
+//!     type Element = i32;
+//!     
+//!     fn num_rows(&self) -> usize { self.size }
+//! 
+//!     fn num_cols(&self) -> usize { self.size }
+//! 
+//!     fn get(&self, i: usize, j: usize) -> Option<&Self::Element> {
+//!         if i >= self.size || j >= self.size {
+//!             None
+//!         }
+//!         else if i == j {
+//!             Some(&1)
+//!         }
+//!         else {
+//!             Some(&0)
+//!         } 
+//!     }
+//! }
+//! 
+//! fn main() {
+//!     let identity = IdentityMatrix { size: 3 };
+//!     
+//!     matrixable::print_rows_debug(&identity);
+//!     println!();
+//! 
+//!     matrixable::print_columns_debug(&identity);
+//!     println!();
+//! 
+//!     matrixable::print_diagonals_debug(&identity);
+//!     println!();
+//! 
+//!     println!("Properties:");
+//!     println!("* Square matrix: {}", identity.is_square());
+//!     println!("* Symmetric: {}", identity.is_symmetric());
+//!     println!("* Skew-symmetric: {}", identity.is_skew_symmetric());
+//!     println!("* Diagonal matrix: {}", identity.is_diagonal().0);
+//!     println!("* Scalar matrix: {}", identity.is_scalar().0);
+//!     println!("* Constant matrix: {}", identity.is_constant().0);
+//! }
+//! ```
 
 extern crate alloc;
 
@@ -19,6 +64,13 @@ pub mod access;
 pub mod iterators;  
 pub mod req;
 pub mod strategies;
+
+pub mod prelude {
+    pub use crate::{MatrixExt, MatrixMutExt};
+    pub use crate::strategies::*;
+    pub use crate::req::*;
+    pub use crate::access::Observer;
+}
 
 mod impls;
 
@@ -147,9 +199,25 @@ pub trait MatrixExt
     /// assert_eq!(Some(&40), v.get_nth(1));
     /// assert_eq!(None, v.get_nth(3));
     /// ```
+    #[inline]
     fn get_nth(&self, n: usize) -> Option<&Self::Element> {
         let (i, j) = self.subscripts_from(n);
         self.get(i, j)
+    }
+        
+    #[inline]
+    /// Returns the first element of the  matrix, or `None` if it is empty.
+    fn first(&self) -> Option<&Self::Element> {
+        self.get(0, 0)
+    }
+    
+    #[inline]
+    /// Returns the last element of the  matrix, or `None` if it is empty.
+    fn last(&self) -> Option<&Self::Element> {
+        match self.dimensions() {
+            (0, _) | (_, 0) => None,
+            (r, c) => self.get(r - 1, c - 1)
+        }
     }
     
     /// Returns a reference to an element given its linear order, without doing bound checking.
@@ -187,6 +255,7 @@ pub trait MatrixExt
     /// assert_eq!(5, [[1, 2, 3, 4, 5]].size());
     /// assert_eq!(6, [[1, 2], [3, 4], [5, 6]].size());
     /// ```
+    #[inline]
     fn size(&self) -> usize { self.num_rows() * self.num_cols() }
     
     /// Returns the dimensions of the matrix
@@ -199,6 +268,7 @@ pub trait MatrixExt
     ///
     /// assert_eq!((2, 3), m.dimensions());
     /// ```
+    #[inline]
     fn dimensions(&self) -> (usize, usize) { (self.num_rows(), self.num_cols()) }
 
     /// Returns the number of diagonals.
@@ -215,7 +285,8 @@ pub trait MatrixExt
     ///
     /// assert_eq!(5, m.num_diags());
     /// ```
-    fn num_diags(&self) -> usize { self.num_cols() - 1 + self.num_rows() }
+    #[inline]
+    fn num_diags(&self) -> usize { self.num_cols().saturating_sub(1) + self.num_rows() }
 
     /// Returns the length of a row.
     #[inline(always)]
@@ -225,6 +296,57 @@ pub trait MatrixExt
     #[inline(always)]
     fn col_len(&self) -> usize { self.num_rows() }
 
+    /// Gives the length of a diagonal. 
+    /// Returns 0 if the matrix is empty or if the diagonal 
+    /// indexed by `n` does not exist.
+    ///
+    /// # Example
+    /// ```rust
+    /// use matrixable::MatrixExt;
+    ///
+    /// let m = [
+    ///     [0, 0, 0],
+    ///     [0, 0, 0],
+    ///     [0, 0, 0],
+    ///     [0, 0, 0],
+    /// ];
+    /// 
+    /// assert_eq!(1, m.diag_len(0));
+    /// assert_eq!(2, m.diag_len(1));
+    /// assert_eq!(3, m.diag_len(2));
+    /// assert_eq!(3, m.diag_len(3));
+    /// assert_eq!(2, m.diag_len(4));
+    /// assert_eq!(1, m.diag_len(5));
+    ///
+    /// assert_eq!(0, m.diag_len(6));
+    ///
+    /// let empty: [[u8; 0]; 1] = [[]]; 
+    /// assert_eq!(0, empty.diag_len(0));
+    /// ```
+    fn diag_len(&self, mut n: usize) -> usize {
+        let (rows, cols) = self.dimensions();
+        // num_diags()
+        let ndiags = cols.saturating_sub(1) + rows;
+        if self.is_empty() || n >= ndiags {
+            return 0;
+        }
+        let main_diag = rows - 1;
+        n = if n >= main_diag {
+           // Use its symmetric to calculate length.
+           ndiags - n - 1
+        }
+        else {
+            n
+         };
+        
+        if n > cols {
+            // Cut the non existing columns.
+            n -= n - cols;
+        }
+        // +1 because diag index statts from 0.
+        n + 1
+    }
+    
     /// Checks if the provided subscripts point to an element inside the matrix.
     ///
     /// # Example
@@ -242,6 +364,7 @@ pub trait MatrixExt
     /// assert!(m.check(1,1));
     /// assert!(!m.check(2,0));
     /// ```
+    #[inline]
     fn check(&self, i: usize, j: usize) -> bool {
         i < self.num_rows() && j < self.num_cols()
     }
@@ -263,6 +386,7 @@ pub trait MatrixExt
     /// assert!(m.check_nth(3));
     /// assert!(!m.check_nth(4));
     /// ```
+    #[inline]
     fn check_nth(&self, n: usize) -> bool {
         n < self.size()
     }
@@ -294,6 +418,7 @@ pub trait MatrixExt
     /// assert_eq!(7, m.index_from((2, 3)));    
     /// assert_eq!(14, m.index_from((2, 10)));
     /// ```
+    #[inline]
     fn index_from(&self, (i, j): (usize, usize)) -> usize {  
         i * self.num_cols() + j
     }
@@ -331,6 +456,7 @@ pub trait MatrixExt
     /// assert_eq!((3, 1), m.subscripts_from(7));    
     /// assert_eq!((7, 0), m.subscripts_from(14));
     /// ```
+    #[inline]
     fn subscripts_from(&self, n: usize) -> (usize, usize) { 
         (n / self.num_cols(), n % self.num_cols())
     }
@@ -355,6 +481,7 @@ pub trait MatrixExt
     ///
     /// assert_eq!(None, m.checked_index_from((2, 0)));
     /// ```
+    #[inline]
     fn checked_index_from(&self, (i, j): (usize, usize)) -> Option<usize> {  
         if self.check(i, j) {
             let n = i * self.num_cols() + j;
@@ -385,6 +512,7 @@ pub trait MatrixExt
     ///
     /// assert_eq!(None, m.checked_subscripts_from(4));
     /// ```
+    #[inline]
     fn checked_subscripts_from(&self, n: usize) -> Option<(usize, usize)> { 
         if n >= self.size() {
             None
@@ -415,6 +543,7 @@ pub trait MatrixExt
     /// assert_eq!(iterator.next(), Some(&4));
     /// assert_eq!(iterator.next(), None);
     /// ```
+    #[inline]
     fn iter(&self) -> Iter<'_, Self> where Self: Sized { Iter::new(self) }
 
     
@@ -436,6 +565,7 @@ pub trait MatrixExt
     /// 
     /// assert!(m.row(3).is_none());
     /// ```
+    #[inline]
     fn row(&self, i: usize) -> Option<Row<'_, Self>>
     where Self: Sized
     {
@@ -473,6 +603,7 @@ pub trait MatrixExt
     ///
     /// assert!(m.col(2).is_none());    
     /// ```
+    #[inline]
     fn col(&self, j: usize) -> Option<Column<'_, Self>> 
     where Self: Sized
     {
@@ -511,6 +642,7 @@ pub trait MatrixExt
     ///
     /// assert!(m.diag(5).is_none());
     /// ```
+    #[inline]
     fn diag(&self, n: usize) ->  Option<Diag<'_, Self>>
     where Self: Sized
     {
@@ -589,6 +721,7 @@ pub trait MatrixExt
     /// assert_eq!(vec![&5, &6], rows.next().unwrap().collect::<Vec<_>>());
     /// assert!(rows.next().is_none());
     ///```
+    #[inline]
     fn rows(&self) -> Rows<Self> where Self: Sized { 
         Rows::from(self)
     }
@@ -605,6 +738,7 @@ pub trait MatrixExt
     /// assert_eq!(vec![&2, &4, &6], cols.next().unwrap().collect::<Vec<_>>());
     /// assert!(cols.next().is_none());
     ///```
+    #[inline]
     fn cols(&self) -> Columns<Self> where Self: Sized { 
         Columns::from(self)
     }
@@ -658,6 +792,7 @@ pub trait MatrixExt
     ///
     /// assert!(diags.next().is_none());
     /// ```
+    #[inline]
     fn diags(&self) -> Diags<Self> where Self: Sized {
         Diags::from(self) 
     }
@@ -698,6 +833,7 @@ pub trait MatrixExt
     /// However, prefer using [`AccessStrategySet`] method if you have a considerable number of `AccessStrategy`s to chain.
     ///
     /// [`AccessStrategySet`]: crate::strategies::AccessStrategySet
+    #[inline]
     fn access<S: AccessStrategy<Self>>(&self, strategy: S) -> Access<'_, Self, S>
     where Self: Sized {
         Access::new(self, strategy)
@@ -706,35 +842,87 @@ pub trait MatrixExt
     
     /// Converts a matrix into an iterator over rows of the matrix.
     /// # Important
-    /// Struct implementing the trait `MatrixExt` and `IntoIterator<Item = MatrixExt::Element>` must ensure 
-    /// that conversion does not change the order of elements (follows the *Row Major Order*).
-    /// TODO: Example
+    /// Struct using this method must ensure that conversion
+    /// to `IntoRows` does not change the original order of elements (follow the *Row Major Order*).
+    /// # Example
+    /// ```
+    /// use matrixable::MatrixExt;
+    /// 
+    /// let m = [[1, 2, 3], [4, 5, 6]];
+    /// 
+    /// let mut rows = m.into_rows();
+    /// 
+    /// assert_eq!(Some(vec![1, 2, 3]), rows.next());
+    /// assert_eq!(Some(vec![4, 5, 6]), rows.next());
+    /// 
+    /// assert!(rows.next().is_none());
+    /// ```
+    #[inline]
     fn into_rows(self) -> IntoRows<Self::Element> 
-    where Self: Sized + IntoIterator<Item = Self::Element> {
+    where Self: Sized,
+          IntoRows<Self::Element>: From<Self> 
+    {
         IntoRows::from(self) 
     }
 
     /// Converts a matrix into an iterator over columns of the matrix.
     /// # Important
-    /// Struct implementing the trait `MatrixExt` and `IntoIterator<Item = MatrixExt::Element>` must ensure 
-    /// that conversion does not change the order of elements (follows the *Row Major Order*).
-    /// TODO: Example
+    /// Struct using this method must ensure that conversion
+    /// to `IntoCols` does not change the original order of elements (follow the *Row Major Order*).
+    /// # Example
+    /// ```
+    /// use matrixable::MatrixExt;
+    /// 
+    /// let m = [[1, 2, 3], [4, 5, 6]];
+    /// 
+    /// let mut cols = m.into_cols();
+    /// 
+    /// assert_eq!(Some(vec![1, 4]), cols.next());
+    /// assert_eq!(Some(vec![2, 5]), cols.next());
+    /// assert_eq!(Some(vec![3, 6]), cols.next());
+    /// 
+    /// assert!(cols.next().is_none());
+    /// ```
+    #[inline]
     fn into_cols(self) -> IntoCols<Self::Element> 
-    where Self: Sized + IntoIterator<Item = Self::Element> {
+    where Self: Sized,
+          IntoCols<Self::Element>: From<Self> 
+    {
           IntoCols::from(self) 
     }
 
     /// Converts a matrix into an iterator over diagonals of the matrix.
     /// # Important
-    /// Struct implementing the trait `MatrixExt` and `IntoIterator<Item = MatrixExt::Element>` must ensure 
-    /// that conversion does not change the order of elements (follows the *Row Major Order*).
-    /// TODO: Example
+    /// Struct using this method must ensure that conversion
+    /// to `IntoDiags` does not change the original order of elements (follow the *Row Major Order*).
+    /// # Example
+    /// ```
+    /// use matrixable::MatrixExt;
+    /// 
+    /// let m = [
+    ///     [1, 2, 3],
+    ///     [4, 5, 6]
+    /// ];
+    /// 
+    /// let mut diags = m.into_diags();
+    /// 
+    /// assert_eq!(Some(vec![4]), diags.next());
+    /// assert_eq!(Some(vec![1, 5]), diags.next());
+    /// assert_eq!(Some(vec![2, 6]), diags.next());
+    /// assert_eq!(Some(vec![3]), diags.next());
+    /// 
+    /// assert!(diags.next().is_none());
+    /// ```
+    #[inline]
     fn into_diags(self) -> IntoDiags<Self::Element>
-    where Self: Sized + IntoIterator<Item = Self::Element> {
+    where Self: Sized,
+          IntoDiags<Self::Element>: From<Self>  
+    {
         IntoDiags::from(self) 
     }
 
-    /// Consumes the matrix an returns an output defined by a `TransformStrategy`. 
+    /// Consumes the matrix an returns an output defined by a `TransformStrategy`.
+    #[inline] 
     fn transform<S: TransformStrategy<Self>>(self, strategy: &S) -> S::Output  
     where Self: Sized
     {
@@ -757,6 +945,7 @@ pub trait MatrixExt
     /// let empty3: [[u8; 0]; 2] = [[], []];
     /// assert!(empty3.is_empty());
     /// ```
+    #[inline]
     fn is_empty(&self) -> bool {
         self.size() == 0
     }
@@ -790,6 +979,7 @@ pub trait MatrixExt
     /// // any other
     /// assert!(![[0; 2]; 4].is_square());
     /// ```
+    #[inline]
     fn is_square(&self) -> bool {
         self.num_rows() == self.num_cols()
     }
@@ -813,6 +1003,7 @@ pub trait MatrixExt
     /// let empty3: [[u8; 0]; 2] = [[], []];
     /// assert_eq!(false, empty3.is_vector());
     /// ```
+    #[inline]
     fn is_vector(&self) -> bool {
         self.num_rows() == 1 || self.num_cols() == 1
     }
@@ -942,6 +1133,7 @@ pub trait MatrixExt
     /// let empty3: [[u8; 0]; 2] = [[], []];
     /// assert!(!empty3.is_singleton());
     /// ```
+    #[inline]
     fn is_singleton(&self) -> bool {
         self.dimensions() == (1, 1)
     }
@@ -966,6 +1158,7 @@ pub trait MatrixExt
     /// let empty3: [[u8; 0]; 2] = [[], []];
     /// assert!(empty3.is_horizontal());
     /// ```
+    #[inline]
     fn is_horizontal(&self) -> bool {
         self.num_rows() <= self.num_cols()
     }
@@ -989,6 +1182,7 @@ pub trait MatrixExt
     /// let empty3: [[u8; 0]; 2] = [[], []];
     /// assert!(empty3.is_vertical());
     /// ```
+    #[inline]
     fn is_vertical(&self) -> bool {
         self.num_rows() >= self.num_cols()
     }
@@ -1217,6 +1411,7 @@ pub trait MatrixMutExt: MatrixExt {
     ///
     /// assert_eq!(2, v[0][2]);
     /// ```
+    #[inline]
     fn get_nth_mut(&mut self, n: usize) -> Option<&mut Self::Element> {
         let (i, j) = self.subscripts_from(n);
         self.get_mut(i, j)
@@ -1253,6 +1448,22 @@ pub trait MatrixMutExt: MatrixExt {
         self.get_unchecked_mut(i, j)
     }
     
+    #[inline]
+    /// Returns a mutable pointer to the first element of the  matrix, or `None` if it is empty.
+    fn first_mut(&mut self) -> Option<&mut Self::Element> {
+        self.get_mut(0, 0)
+    }
+    
+    #[inline]
+    /// Returns a mutable pointer to the last element of the  matrix, or `None` if it is empty.
+    fn last_mut(&mut self) -> Option<&mut Self::Element> {
+        match self.dimensions() {
+            (0, _) | (_, 0) => None,
+            (r, c) => self.get_mut(r - 1, c - 1)
+        }
+    }
+    
+    
     /// Changes the value of an element at the intersection of the `i`-th row and the `j`-th column of the matrix.
     ///
     /// # Error
@@ -1269,6 +1480,7 @@ pub trait MatrixMutExt: MatrixExt {
     ///
     /// assert_eq!(Err("Cannot access element from indexes."), m.set((1, 0), 11));
     /// ```
+    #[inline]
     fn set(&mut self, (i, j): (usize, usize), val: Self::Element) -> Result<(), &'static str> {
         match self.get_mut(i, j) {
             Some(target) => {
@@ -1295,6 +1507,7 @@ pub trait MatrixMutExt: MatrixExt {
     ///
     /// assert_eq!(Err("Cannot access element from index."), m.set_nth(3, 11));
     /// ```
+    #[inline]
     fn set_nth(&mut self, n: usize, val: Self::Element) -> Result<(), &'static str> {
         let (i, j) = self.subscripts_from(n);
         match self.get_mut(i, j) {
@@ -1402,6 +1615,7 @@ pub trait MatrixMutExt: MatrixExt {
     ///
     /// assert_eq!(x, &mut [[1, 2, 3], [4, 5, 6]]);
     /// ```
+    #[inline]
     fn iter_mut(&mut self) -> IterMut<'_, Self> where Self: Sized { IterMut::new(self) }
     
     /// Returns an iterator that allows modifying each element of the `i`-th row.
@@ -1420,6 +1634,7 @@ pub trait MatrixMutExt: MatrixExt {
     /// 
     /// assert_eq!(x, &mut [[1, 2, 4], [0, 0, 0]]);
     /// ```
+    #[inline]
     fn row_mut(&mut self, i: usize) -> Option<RowMut<'_, Self>> 
     where Self: Sized 
     {
@@ -1453,6 +1668,7 @@ pub trait MatrixMutExt: MatrixExt {
     /// 
     /// assert_eq!(x, &mut [[1, 5, 4], [2, 8, 6]]);
     /// ```
+    #[inline]
     fn col_mut(&mut self, j: usize) -> Option<ColumnMut<'_, Self>>
     where Self: Sized
     {
@@ -1494,6 +1710,7 @@ pub trait MatrixMutExt: MatrixExt {
     ///     [0, 0, 1],
     /// ], m);
     /// ```
+    #[inline]
     fn diag_mut(&mut self, n: usize) ->  Option<DiagMut<'_, Self>>
     where Self: Sized
     {
@@ -1580,6 +1797,7 @@ pub trait MatrixMutExt: MatrixExt {
     /// assert!(rows.next().is_none());
     ///
     /// ```
+    #[inline]
     fn rows_mut(&mut self) -> RowsMut<Self> where Self: Sized {
         RowsMut::from(self) 
     }
@@ -1598,6 +1816,7 @@ pub trait MatrixMutExt: MatrixExt {
     /// assert_eq!(vec![&mut 2, &mut 4, &mut 6], cols.next().unwrap().collect::<Vec<_>>());
     /// assert!(cols.next().is_none());
     /// ```
+    #[inline]
     fn cols_mut (&mut self) -> ColumnsMut<Self> where Self: Sized {
         ColumnsMut::from(self) 
     }
@@ -1624,6 +1843,7 @@ pub trait MatrixMutExt: MatrixExt {
     ///     [1, 2, 3]
     /// ], m);
     /// ```
+    #[inline]
     fn diags_mut (&mut self) -> DiagsMut<Self> where Self: Sized {
         DiagsMut::from(self) 
     }
@@ -1660,39 +1880,16 @@ pub trait MatrixMutExt: MatrixExt {
     /// if you have a considerable number of `AccessStrategy`s to chain.
     ///
     /// [`AccessStrategySet`]: crate::strategies::AccessStrategySet
+    #[inline]
     fn access_mut<S: AccessStrategy<Self>>(&mut self, strategy: S) -> AccessMut<'_, Self, S>
     where Self: Sized {
         AccessMut::new(self, strategy)
     }
     
-    /// Modifies the matrix in place according to a certain strategy. 
-    fn in_place<S: InPlace<Self>>(&mut self, strategy: &S)
+    /// Modifies the matrix [`InPlace`] according to a certain strategy. 
+    #[inline]
+    fn in_place<S: InPlace<Self>>(&mut self, strategy: S)
     where Self: Sized {
         strategy.in_place(self)
-    }
-    
-    /// Clones the matrix.
-    ///
-    /// Your implementation of `Clone` for a struct implementing this trait
-    /// may be better than this method.
-    /// # Example
-    /// ```rust
-    /// use matrixable::MatrixMutExt;
-    /// 
-    /// let a = [[10, 20, 30]];
-    /// let b = a.duplicate();
-    ///
-    /// assert_eq!(a, b);
-    /// ```
-    fn duplicate(&self) -> Self
-    where 
-        Self: Clone,
-        Self::Element: Clone
-    {
-        let mut m2 = self.clone();
-        self.iter()
-            .zip(m2.iter_mut())
-            .for_each(|(&ref x, x2)| *x2 = x.clone());
-        m2
     }
 }

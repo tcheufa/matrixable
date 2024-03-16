@@ -422,7 +422,7 @@ pub struct SubMatrix<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>>(pub Row
 pub struct AccessMap<Mapping: MatrixExt>(pub Mapping); 
 
 /// This strategy access elements of this matrix following an ordered set of `AccessStrategy`s.
-///
+/// This set can only strategies implementing `AccessStrategy<Observer>`.
 ///
 /// # Example
 /// ```rust
@@ -638,6 +638,31 @@ impl<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>> SubMatrix<Rows, Cols>
 
 // ### AccessStrategy
 
+impl <M: MatrixExt, S: AccessStrategy<M>> AccessStrategy<M> for &S {
+    fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
+        (*self).access(m, i, j)
+    }
+    fn nrows(&self, m: &M) -> usize { (*self).nrows(m) }
+    fn ncols(&self, m: &M) -> usize { (*self).ncols(m) }
+}
+
+impl <M: MatrixExt> AccessStrategy<M> for Box<dyn AccessStrategy<M>> {
+    fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
+        self.deref().access(m, i, j)
+    }
+    fn nrows(&self, m: &M) -> usize { self.deref().nrows(m) }
+    fn ncols(&self, m: &M) -> usize { self.deref().ncols(m) }
+}
+
+impl <M: MatrixExt> AccessStrategy<M> for &dyn AccessStrategy<M> {
+    fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
+        (*self).access(m, i, j)
+    }
+    fn nrows(&self, m: &M) -> usize { (*self).nrows(m) }
+    fn ncols(&self, m: &M) -> usize { (*self).ncols(m) }
+}
+
+
 impl<M: MatrixExt> AccessStrategy<M> for Identity {
     fn access(&self, _m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         Some((i, j))
@@ -803,30 +828,6 @@ impl<M: MatrixExt, Mapping: MatrixExt> AccessStrategy<M> for AccessMap<Mapping>
     fn ncols(&self, _m: &M) -> usize { self.0.num_cols() }
 }
 
-impl <M: MatrixExt, S: AccessStrategy<M>> AccessStrategy<M> for &S {
-    fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
-        (*self).access(m, i, j)
-    }
-    fn nrows(&self, m: &M) -> usize { (*self).nrows(m) }
-    fn ncols(&self, m: &M) -> usize { (*self).ncols(m) }
-}
-
-impl <M: MatrixExt> AccessStrategy<M> for Box<dyn AccessStrategy<M>> {
-    fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
-        self.deref().access(m, i, j)
-    }
-    fn nrows(&self, m: &M) -> usize { self.deref().nrows(m) }
-    fn ncols(&self, m: &M) -> usize { self.deref().ncols(m) }
-}
-
-impl <M: MatrixExt> AccessStrategy<M> for &dyn AccessStrategy<M> {
-    fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
-        (*self).access(m, i, j)
-    }
-    fn nrows(&self, m: &M) -> usize { (*self).nrows(m) }
-    fn ncols(&self, m: &M) -> usize { (*self).ncols(m) }
-}
-
 impl <M: MatrixExt> AccessStrategy<M> for AccessStrategySet {
     fn access(&self, m: &M, mut i: usize, mut j: usize) -> Option<(usize, usize)> {
         let observer = Observer::new(
@@ -860,7 +861,17 @@ impl <M: MatrixExt> AccessStrategy<M> for AccessStrategySet {
 
 // ### InPlace
 
-impl<M: MatrixExt> InPlace<M> for Identity {
+impl<M, S> InPlace<M> for &S
+where 
+    M: MatrixMutExt, S: InPlace<M> 
+{
+    #[inline]
+    fn in_place(&self, m: &mut M) {
+        (*self).in_place(m)
+    }
+}
+
+impl<M: MatrixMutExt> InPlace<M> for Identity {
     /// Does nothing internally.
     fn in_place(&self, _m: &mut M) {}
 }
@@ -969,6 +980,16 @@ impl<M: MatrixMutExt> InPlace<M> for ShiftFront {
 }
 
 // ### TransformStrategy
+
+impl<M, S> TransformStrategy<M> for &S 
+where 
+    M: MatrixExt,
+    S: TransformStrategy<M>
+{
+    type Output = <S as TransformStrategy<M>>::Output;
+    
+    fn out_of(&self, m: M) -> Self::Output { (*self).out_of(m) }
+}
 
 impl<M: MatrixExt> TransformStrategy<M> for Identity {
     type Output = M;

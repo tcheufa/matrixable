@@ -30,10 +30,10 @@
 
 * Changed manual implementation of `Copy` and `Clone` to derive macro on 1D iterators (hope that will never cause a crash).
 
-* Updated `README` file: added properties display.
+* Updated `README` file: added properties display on example.
 
 
-# Version 0.3.0 (March 13, 2024) 
+# Version 0.3.0 (March 14, 2024) 
 
 ## 🚨 **BREAKING CHANGES**
 
@@ -44,3 +44,30 @@
 * Removed the `Copy` constraint on generic parameter `T` inside `TransformStrategy<[[T; N]; M]> for Transpose` implementation
 
 * Added `no_std` support, making now use of `std` module optional.
+
+
+# Version 0.4.0 (March 15, 2024) 
+
+## 🚨 **BREAKING CHANGES**
+
+* Removed method `duplicate` in `MatrixExtMut`'s provided methods.
+
+* Added method `diag_len`.
+
+* Added methods `first` and `first_mut`.
+
+* Added methods `last` and `last_mut`.
+
+* Fixed `num_diags` overflow error: It now returns 0 for an empty matrix.
+
+* Added a `prelude` module.
+
+* Fields of struct `Observer` are now public.
+
+* `InPlace` trait now requires Matrix as `MatrixExtMut` instead of `MatrixExt`.
+
+* Implementation of `DoubleEndedIterator` for iterators `Row(Mut)`, `Column(Mut)`, `Diag(Mut)` now follows the behavior from the rust standard library documentation.
+
+* Added implemention of `TransformStrategy` and `InPlace` for immutable references implementing these traits.
+
+* Changed `Sized + IntoIterator<Self::Element>` clause to `Self: Sized` and `IntoRows<Self::Element>: From<Self>`, `IntoCols<Self::Element>: From<Self>`, `IntoDiags<Self::Element>: From<Self>`, respectively on methods `into_rows`, `into_cols` and `into_diags`.
