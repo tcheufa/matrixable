@@ -317,7 +317,7 @@ iter!{
     ColumnMut { mut } { mut} MatrixMutExt get_nth_mut icol;
     |m: &M, col| {
         let (rows, cols) = m.dimensions();
-        (col, (rows * cols) - cols.saturating_sub(1))
+        (col, (rows * cols) - cols.saturating_sub(col))
     } ;
     fn increment(&self, i: usize) -> usize {  
         i + self.matrix().row_len()
