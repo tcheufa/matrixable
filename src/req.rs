@@ -21,6 +21,7 @@ pub trait MatrixExtFromIter<A> {
 
 
 /// A trait for in-place modification of matrices.
+/// The following example shows the implementation of the `SortBy` strategy used in this crate.
 ///
 /// # Example
 /// ```

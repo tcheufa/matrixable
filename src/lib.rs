@@ -7,56 +7,6 @@
 //! Note also that this crate extends the standard 2D array `[[T; N]; M]`.
 //!
 //! [`Row Major Order`]: https://en.m.wikipedia.org/wiki/Row-_and_column-major_order
-//! 
-//! ## Example 
-//! ```rust
-//! extern crate matrixable;
-//! use matrixable::MatrixExt;
-//! use std;
-//! 
-//! struct IdentityMatrix { size: usize }
-//! 
-//! impl MatrixExt for IdentityMatrix {
-//!     type Element = i32;
-//!     
-//!     fn num_rows(&self) -> usize { self.size }
-//! 
-//!     fn num_cols(&self) -> usize { self.size }
-//! 
-//!     fn get(&self, i: usize, j: usize) -> Option<&Self::Element> {
-//!         if i >= self.size || j >= self.size {
-//!             None
-//!         }
-//!         else if i == j {
-//!             Some(&1)
-//!         }
-//!         else {
-//!             Some(&0)
-//!         } 
-//!     }
-//! }
-//! 
-//! fn main() {
-//!     let identity = IdentityMatrix { size: 3 };
-//!     
-//!     matrixable::print_rows_debug(&identity);
-//!     println!();
-//! 
-//!     matrixable::print_columns_debug(&identity);
-//!     println!();
-//! 
-//!     matrixable::print_diagonals_debug(&identity);
-//!     println!();
-//! 
-//!     println!("Properties:");
-//!     println!("* Square matrix: {}", identity.is_square());
-//!     println!("* Symmetric: {}", identity.is_symmetric());
-//!     println!("* Skew-symmetric: {}", identity.is_skew_symmetric());
-//!     println!("* Diagonal matrix: {}", identity.is_diagonal().0);
-//!     println!("* Scalar matrix: {}", identity.is_scalar().0);
-//!     println!("* Constant matrix: {}", identity.is_constant().0);
-//! }
-//! ```
 
 extern crate alloc;
 
@@ -74,21 +24,25 @@ pub mod prelude {
 
 mod impls;
 
+use alloc::vec::Vec;
 
-#[cfg(feature = "std")]
 pub fn print_rows_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
-    println!("Rows"); 
+	  extern crate std;
+	  use std::println;
+    println!("Rows");
     p.rows().enumerate().for_each(|(i, row)| println!("{i}: {:?}", row.collect::<Vec<_>>()))
 }
 
-#[cfg(feature = "std")]
 pub fn print_columns_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
+		extern crate std;
+	  use std::println;
     println!("Columns");
     p.cols().enumerate().for_each(|(i, col)| println!("{i}: {:?}", col.collect::<Vec<_>>()))
 }
 
-#[cfg(feature = "std")]
 pub fn print_diagonals_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
+		extern crate std;
+	  use std::println;
     println!("Diagonals");
     p.diags().enumerate().for_each(|(i, diag)| println!("{i}: {:?}", diag.collect::<Vec<_>>()))
 }
@@ -842,8 +796,9 @@ pub trait MatrixExt
     
     /// Converts a matrix into an iterator over rows of the matrix.
     /// # Important
-    /// Struct using this method must ensure that conversion
-    /// to `IntoRows` does not change the original order of elements (follow the *Row Major Order*).
+    /// Struct using this method must ensure that `IntoIterator` implementation is an iteration over
+    /// **rows**, each of which implements `IntoIterator` over its elements.
+    /// This requirement is indispensable for a correct use of this method.
     /// # Example
     /// ```
     /// use matrixable::MatrixExt;
@@ -858,17 +813,18 @@ pub trait MatrixExt
     /// assert!(rows.next().is_none());
     /// ```
     #[inline]
-    fn into_rows(self) -> IntoRows<Self::Element> 
-    where Self: Sized,
-          IntoRows<Self::Element>: From<Self> 
+    fn into_rows(self) -> IntoAxes<Self::Element>
+        where Self: Sized +  IntoIterator,
+              <Self as IntoIterator>::Item: IntoIterator<Item = Self::Element>
     {
-        IntoRows::from(self) 
+        IntoAxes::from_as_rows(self)
     }
 
     /// Converts a matrix into an iterator over columns of the matrix.
     /// # Important
-    /// Struct using this method must ensure that conversion
-    /// to `IntoCols` does not change the original order of elements (follow the *Row Major Order*).
+    /// Struct using this method must ensure that `IntoIterator` implementation is an iteration over
+    /// **rows**, each of which implements `IntoIterator` over its elements.
+    /// This requirement is indispensable for a correct use of this method.
     /// # Example
     /// ```
     /// use matrixable::MatrixExt;
@@ -884,17 +840,18 @@ pub trait MatrixExt
     /// assert!(cols.next().is_none());
     /// ```
     #[inline]
-    fn into_cols(self) -> IntoCols<Self::Element> 
-    where Self: Sized,
-          IntoCols<Self::Element>: From<Self> 
+    fn into_cols(self) -> IntoAxes<Self::Element>
+        where Self: Sized + IntoIterator,
+              <Self as IntoIterator>::Item: IntoIterator<Item = Self::Element>
     {
-          IntoCols::from(self) 
+        IntoAxes::from_as_cols(self)
     }
 
     /// Converts a matrix into an iterator over diagonals of the matrix.
     /// # Important
-    /// Struct using this method must ensure that conversion
-    /// to `IntoDiags` does not change the original order of elements (follow the *Row Major Order*).
+    /// Struct using this method must ensure that `IntoIterator` implementation is an iteration over
+    /// **rows**, each of which implements `IntoIterator` over its elements.
+    /// This requirement is indispensable for a correct use of this method.
     /// # Example
     /// ```
     /// use matrixable::MatrixExt;
@@ -914,11 +871,11 @@ pub trait MatrixExt
     /// assert!(diags.next().is_none());
     /// ```
     #[inline]
-    fn into_diags(self) -> IntoDiags<Self::Element>
-    where Self: Sized,
-          IntoDiags<Self::Element>: From<Self>  
+    fn into_diags(self) -> IntoAxes<Self::Element>
+    where Self: Sized + IntoIterator,
+          <Self as IntoIterator>::Item: IntoIterator<Item = Self::Element>
     {
-        IntoDiags::from(self) 
+        IntoAxes::from_as_diags(self)
     }
 
     /// Consumes the matrix an returns an output defined by a `TransformStrategy`.
