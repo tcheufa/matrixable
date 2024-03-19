@@ -68,6 +68,12 @@
 
 * Implementation of `DoubleEndedIterator` for iterators `Row(Mut)`, `Column(Mut)`, `Diag(Mut)` now follows the behavior from the rust standard library documentation.
 
-* Added implemention of `TransformStrategy` and `InPlace` for immutable references implementing these traits.
+* Added implementation of `TransformStrategy` and `InPlace` for immutable references implementing these traits.
 
-* Changed `Sized + IntoIterator<Self::Element>` clause to `Self: Sized` and `IntoRows<Self::Element>: From<Self>`, `IntoCols<Self::Element>: From<Self>`, `IntoDiags<Self::Element>: From<Self>`, respectively on methods `into_rows`, `into_cols` and `into_diags`.
+* Merged structs `IntoRows`, `IntoCols`, and `IntoDiags` into `IntoAxes`. Each function returning the old struct now returns `IntoAxes`
+
+* Changed `Self: Sized + IntoIterator<Self::Element>` clause to `Self: Sized + IntoIterator, <Self as IntoIterator>::Item: IntoIterator<Item = Self::Element>` 
+
+* Added new `InPlace` strategy struct: `SortBy`.
+
+* Effectively added "std" feature.

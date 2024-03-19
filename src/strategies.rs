@@ -509,13 +509,43 @@ pub struct AccessMap<Mapping: MatrixExt>(pub Mapping);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub type AccessStrategySet = Vec<Box<dyn AccessStrategy<Observer>>>;
 
+/// Sorts the matrix according to the result of a function.
+/// If that argument function returns true, then its first parameter is considered
+/// to come before the second parameter. The ordering can then be processed
+/// based on that assumption.
+///
+/// # Note
+/// The sorting algorithm used is **selection sort**. But this may change in a future version
+/// (or not).
+/// # Example
+/// ```
+/// use matrixable::MatrixMutExt;
+/// use matrixable::strategies::SortBy;
+///
+/// let mut m = [
+/// [4,  5,  6],
+/// [9,  1, 20],
+/// [4, 12, -1]
+/// ];
+///
+/// m.in_place(SortBy(|a, b| a < b));
+///
+/// assert_eq!(m, [
+///     [-1,  1,  4],
+///     [ 4,  5,  6],
+///     [ 9, 12, 20]
+/// ]);
+/// ```
+#[derive(Hash, Clone, Copy, Debug)]
+pub struct SortBy<T> (pub fn(&T, &T) -> bool);
+
 
 // ### Self Impls
-
 
 impl Transpose {
     /// In-place transposition optimized for square matrices.
     /// # Panics
+    ///
     /// Panics if the matrix is not a square matrix.
     pub fn in_place_square<M: MatrixMutExt>(&self, m: &mut M) {
         if !m.is_square() {
@@ -541,9 +571,7 @@ impl Transpose {
         let mut toreplace;
         let mut next ;
         let mut cycle_begin;
-    
-//         use alloc::collections::HashSet;
-        
+
         #[cfg(not(feature = "std"))]
         let mut moved: Vec<usize> = vec![];
         
@@ -583,6 +611,7 @@ impl Reverse {
     /// This method does nothing if an invalid range (such as `5..0`) is provided.
     /// 
     /// # Panics
+    ///
     /// Panics if `start` or `end` are out of bounds.
     pub fn rev<M: MatrixMutExt>(&self, m: &mut M, range: ::core::ops::Range<usize>) {
         let mid = (range.start + range.end) / 2;
@@ -594,6 +623,7 @@ impl Reverse {
     /// This method does nothing if an invalid range (such as `(1, 3)..(0, 0)`) is provided.
     ///
     /// # Panics
+    ///
     /// Panics if `start` or `end` are out of bounds.
     pub fn rev2<M: MatrixMutExt>(&self, m: &mut M, range: ::core::ops::Range<(usize, usize)>) {
         let (start, end) = (m.index_from(range.start), m.index_from(range.end));
@@ -816,6 +846,7 @@ impl<M: MatrixExt, Mapping: MatrixExt> AccessStrategy<M> for AccessMap<Mapping>
     where for <'a> &'a <Mapping as MatrixExt>::Element: Into<&'a usize>
 {
     /// # Panics
+    ///
     /// Panics if an element of `Mapping` points to no element inside `m`.
     fn access(&self, m: &M, i: usize, j: usize) -> Option<(usize, usize)> {
         let n = self.0.get(i, j)?.into();
@@ -879,7 +910,7 @@ impl<M: MatrixMutExt> InPlace<M> for Identity {
 impl<M: SwapsDimensions> InPlace<M> for Transpose {
     fn in_place(&self, m: &mut M) {
         if m.is_square() {
-            //much more simpler
+            //much simpler
             self.in_place_square(m);
         }
         else {
@@ -943,7 +974,7 @@ impl<M: MatrixMutExt> InPlace<M> for Reverse {
 }
 
 impl<M: MatrixMutExt> InPlace<M> for ShiftBack {
-    // Does not nothing if shift equals 0
+    // Does nothing if shift equals 0
     fn in_place(&self, m: &mut M) {
         let len = m.size();
         let shift = self.0 % len;
@@ -979,6 +1010,27 @@ impl<M: MatrixMutExt> InPlace<M> for ShiftFront {
     }
 }
 
+impl<M: MatrixMutExt> InPlace<M> for SortBy<M::Element> {
+    fn in_place(&self, m: &mut M) {
+        let mut im;
+        let mut min;
+        let mut cmp;
+
+        for i in 0..(m.size() - 1) {
+            im = i;
+            min = m.get_nth(i).unwrap();
+            for j in (i+1)..m.size() {
+                cmp = m.get_nth(j).unwrap();
+                if !(self.0)(min, cmp) {
+                    im = j;
+                    min = cmp;
+                }
+            }
+            m.swapn(im, i);
+        }
+    }
+}
+
 // ### TransformStrategy
 
 impl<M, S> TransformStrategy<M> for &S 
@@ -1002,7 +1054,7 @@ impl<M: SwapsDimensions + MatrixMutExt > TransformStrategy<M> for Transpose {
     
     fn out_of(&self, mut m: M) -> Self::Output {
         if m.is_square() {
-            //much more simpler
+            //much simpler
             self.in_place_square(&mut m);
             m
         }

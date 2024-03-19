@@ -5,17 +5,17 @@ A crate providing utilities for matrix manipulation.
 ```rust
 use matrixable::MatrixExt;
 
-struct IdentityMatrix { size: usize }
+struct IdentityMatrix { dim_size: usize }
 
 impl MatrixExt for IdentityMatrix {
     type Element = i32;
-    
-    fn num_rows(&self) -> usize { self.size }
 
-    fn num_cols(&self) -> usize { self.size }
+    fn num_rows(&self) -> usize { self.dim_size }
+
+    fn num_cols(&self) -> usize { self.dim_size }
 
     fn get(&self, i: usize, j: usize) -> Option<&Self::Element> {
-        if i >= self.size || j >= self.size {
+        if i >= self.dim_size || j >= self.dim_size {
             None
         }
         else if i == j {
@@ -23,13 +23,13 @@ impl MatrixExt for IdentityMatrix {
         }
         else {
             Some(&0)
-        } 
+        }
     }
 }
 
 fn main() {
-    let identity = IdentityMatrix { size: 3 };
-    
+    let identity = IdentityMatrix { dim_size: 3 };
+
     matrixable::print_rows_debug(&identity);
     println!();
 
@@ -40,6 +40,7 @@ fn main() {
     println!();
 
     println!("Properties:");
+    println!("* Dimensions: {:?}", identity.dimensions());
     println!("* Square matrix: {}", identity.is_square());
     println!("* Symmetric: {}", identity.is_symmetric());
     println!("* Skew-symmetric: {}", identity.is_skew_symmetric());
@@ -58,7 +59,7 @@ Rows
 Columns
 0: [1, 0, 0]
 1: [0, 1, 0]
-2: [0, 0, 1]
+2: [0, 0]
 
 Diagonals
 0: [0]
@@ -68,13 +69,13 @@ Diagonals
 4: [0]
 
 Properties:
+* Dimensions: (3, 3)
 * Square matrix: true
 * Symmetric: true
 * Skew-symmetric: false
 * Diagonal matrix: true
 * Scalar matrix: true
 * Constant matrix: false
-
 ```
 
 This library has two main traits: `MatrixExt` and `MatrixMutExt`.
