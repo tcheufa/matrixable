@@ -67,7 +67,7 @@
 
 use ::core::{
     fmt::Debug,
-    iter::FusedIterator,
+    iter::{ FusedIterator, FromIterator },
     marker::PhantomData,
     
 };
@@ -573,27 +573,7 @@ where
 {
     fn len(&self) -> usize {  self.iter.len()  }
 }
-impl<I> DoubleEndedIterator for Enumerator<I>
-where
-    I: DoubleEndedIterator + ExactSizeIterator
-{
-    fn next_back(&mut self) -> Option<Self::Item> { 
-        let i = (self.len() / self.jmp) - self.i - 1;
-        let j = self.jmp - self.j - 1;
-        let next_back = (i, j, self.iter.next_back()?);
-
-        self.j += 1;
-
-        if self.j == self.jmp {
-            self.j = 0;
-            self.i += 1
-        }
-        
-        Some(next_back)  
-    }
-}
 impl<I: FusedIterator> FusedIterator for Enumerator<I> {}
-
 
 
 #[derive(Default, Clone, Debug)]

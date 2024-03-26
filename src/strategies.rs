@@ -536,6 +536,7 @@ pub type AccessStrategySet = Vec<Box<dyn AccessStrategy<Observer>>>;
 ///     [ 9, 12, 20]
 /// ]);
 /// ```
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Hash, Clone, Copy, Debug)]
 pub struct SortBy<T> (pub fn(&T, &T) -> bool);
 

@@ -91,27 +91,36 @@ This trait requires three methods to be implemented:
 Once these methods are implemented, the following features automatically become available:
 
 * **immutability**: All the functions provided by this trait does not modify elements of the matrix-like struct unless that struct is consumed in the process.
-* **iterators**: iteratate over all elements and also over rows, columns and diagonals.
-* **access**: elements differently without changing their positions: transpose access, rotate access, submatrix... 
-* **transformation**: transform struct into another type, maybe another matrix.
-* **metadata**: obtain information about the matrix: symmetry, dimensions, diagonality...
+* **iterators**: Iterate over all elements and also over rows, columns and diagonals.
+* **access**: Access elements differently without changing their positions: transpose access, rotate access, sub-matrix... 
+* **transformation**: Transform struct into another type, maybe another matrix.
+* **metadata**: Get information about the matrix: symmetry, dimensions, diagonality...
 
 
 ## MatrixMutExt
 
-This traits requires for the struct to first implement `MatrixExt` as well as its single required method: `get_mut`.
+This trait requires for the struct to first implement `MatrixExt` as well as its single required method: `get_mut`.
 
 Once implemented `MatrixMutExt` structs inherits features from `MatrixExt` plus the following:
 
 * **mutability**: Functions provided by this trait allow elements to be mutated. Mutable versions of the above features also become available (iterators, access).
 * **in-place modification**.
 
+
+[dependencies]
 ## Important
-* Note also that this crate extends the standard 2D array `[[T; N]; M]`.
+* Note also that this crate extends the standard 2D array `[[T; N]; M]`, now available through the `impls` default feature.
+  The default features can be disabled by setting `default-features` parameter to `false` as follows:
+    ```toml
+    matrixable = { version = "0.5.0", default-features = false }
+    ```
 * This crate support `no_std` environments since ver`0.3.0`.
+* Many improvements and changes have been done since the beginning of this project. Please see to the [`CHANGELOG`](CHANGELOG.md) for more details.
+* Your help and suggestions on improving this crate are highly encouraged. So please feel comfortable to report any issue you may encounter!
+
 
 ## More
-See [**this**](https://docs.rs/matrixable/0.1.0/matrixable/) documentation for additional informations.
+See the [**documentation**](https://docs.rs/matrixable/0.1.0/matrixable/)  for additional information on the library.
 
 
 ## License

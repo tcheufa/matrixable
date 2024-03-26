@@ -37,7 +37,7 @@
 
 ## 🚨 **BREAKING CHANGES**
 
-* Removed method `into_iter` and changed clause `Into<Vec<Self::Element>>` into `Sized + IntoIterator<Self::Element>` on methods `into_rows`, `into_cols` and `into_diags`.
+* Removed method `into_iter` and changed clause `Into<Vec<Self::Elem************ent>>` into `Sized + IntoIterator<Self::Element>` on methods `into_rows`, `into_cols` and `into_diags`.
 
 * Added clause `<I as IntoIterator>::IntoIter: ExactSizeIterator` inside `from_iter` method from `MatrixExtFromIter` trait.
 
@@ -77,3 +77,24 @@
 * Added new `InPlace` strategy struct: `SortBy`.
 
 * Effectively added "std" feature.
+
+
+# Version 0.5.0 (March 19, 2024)
+
+## 🚨 **BREAKING CHANGES**
+
+* Removed conditional compilation based on whether the `std` library is available (did not work as expected).
+
+* Iterator `Enumerator` no more implements `DoubleEndedIterator`.
+
+* Added `serde derive` attribute on `SortBy` struct.
+
+* Added `impls` feature to enable use of `[[T; M]; N]` 2D array as a matrix.
+
+* Removed method `clone_into` on `Access<'a, MatrixMutExt, AccessStrategy>`.
+
+* Changed method `clone_into2` to `clone_into` on `Access<'a, MatrixExt, AccessStrategy>`.
+ 
+* Removed `edition="2021"` inside `Cargo.toml`. 
+
+* Crate is now compatible with the rust editions: 2015, 2018 and 2021.
