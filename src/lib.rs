@@ -4,11 +4,10 @@
 //!
 //! A matrix implementing [`MatrixExt`] is by default in *[`Row Major Order`]*, but you can still change it using transpose access.
 //!
-//! Note also that this crate extends the standard 2D array `[[T; N]; M]`.
+//! # Features
+//! * **impls** (default): Enables implementation of `MatrixExt` and `MatrixMutExt` for the standard 2D array `[[T; N]; M]`.
 //!
 //! [`Row Major Order`]: https://en.m.wikipedia.org/wiki/Row-_and_column-major_order
-
-extern crate alloc;
 
 pub mod access;
 pub mod iterators;  
@@ -20,29 +19,31 @@ pub mod prelude {
     pub use crate::strategies::*;
     pub use crate::req::*;
     pub use crate::access::Observer;
+    pub use crate::{print_rows_debug, print_columns_debug, print_diagonals_debug};
 }
 
+#[cfg(feature = "impls")]
 mod impls;
+
+extern crate alloc;
+extern crate std;
 
 use alloc::vec::Vec;
 
 pub fn print_rows_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
-	  extern crate std;
-	  use std::println;
+    use std::println;
     println!("Rows");
     p.rows().enumerate().for_each(|(i, row)| println!("{i}: {:?}", row.collect::<Vec<_>>()))
 }
 
 pub fn print_columns_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
-		extern crate std;
-	  use std::println;
+    use ::std::println;
     println!("Columns");
     p.cols().enumerate().for_each(|(i, col)| println!("{i}: {:?}", col.collect::<Vec<_>>()))
 }
 
 pub fn print_diagonals_debug<M: MatrixExt> (p: &M) where <M as MatrixExt>::Element: ::core::fmt::Debug {
-		extern crate std;
-	  use std::println;
+    use std::println;
     println!("Diagonals");
     p.diags().enumerate().for_each(|(i, diag)| println!("{i}: {:?}", diag.collect::<Vec<_>>()))
 }
@@ -373,8 +374,8 @@ pub trait MatrixExt
     /// assert_eq!(14, m.index_from((2, 10)));
     /// ```
     #[inline]
-    fn index_from(&self, (i, j): (usize, usize)) -> usize {  
-        i * self.num_cols() + j
+    fn index_from(&self, subscripts: (usize, usize)) -> usize {
+        subscripts.0 * self.num_cols() + subscripts.1
     }
 
     /// Use matrix as a index-to-subscripts converter.
@@ -436,9 +437,9 @@ pub trait MatrixExt
     /// assert_eq!(None, m.checked_index_from((2, 0)));
     /// ```
     #[inline]
-    fn checked_index_from(&self, (i, j): (usize, usize)) -> Option<usize> {  
-        if self.check(i, j) {
-            let n = i * self.num_cols() + j;
+    fn checked_index_from(&self, subscripts: (usize, usize)) -> Option<usize> {
+        if self.check(subscripts.0, subscripts.1) {
+            let n = subscripts.0 * self.num_cols() + subscripts.1;
             Some(n)
         }
         else {
@@ -1001,12 +1002,7 @@ pub trait MatrixExt
         }
         
         let limit = r * c  -  1;
-        
-        #[cfg(feature = "std")]
-        let mut hash = std::collections::HashSet::new();
 
-
-        #[cfg(not(feature = "std"))]
         let mut hash = alloc::vec::Vec::new();
 
         let mut dest: usize;
@@ -1017,11 +1013,6 @@ pub trait MatrixExt
                 continue;
             }
 
-            
-            #[cfg(feature = "std")]
-            hash.insert(dest);
-            
-            #[cfg(not(feature = "std"))]
             hash.push(dest);
 
             let (i, j) = (n / c, n % c);
@@ -1438,8 +1429,8 @@ pub trait MatrixMutExt: MatrixExt {
     /// assert_eq!(Err("Cannot access element from indexes."), m.set((1, 0), 11));
     /// ```
     #[inline]
-    fn set(&mut self, (i, j): (usize, usize), val: Self::Element) -> Result<(), &'static str> {
-        match self.get_mut(i, j) {
+    fn set(&mut self, subscripts: (usize, usize), val: Self::Element) -> Result<(), &'static str> {
+        match self.get_mut(subscripts.0, subscripts.1) {
             Some(target) => {
                 *target = val;
                 Ok(())

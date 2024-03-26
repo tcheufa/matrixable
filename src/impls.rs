@@ -35,17 +35,17 @@ impl<T, const N: usize, const M: usize> MatrixMutExt for [[T; N]; M] {
     }
 }
 
-impl<T: Default, const N: usize, const M: usize> TransformStrategy<[[T; N]; M]> for Transpose { 
-    type Output = [[T; M]; N];
-    fn out_of(&self, m: [[T; N]; M]) -> Self::Output {
-        let mut t: [[T; M]; N] = ::core::array::from_fn(|_|
+impl<T: Default, const M: usize, const N: usize> TransformStrategy<[[T; M]; N]> for Transpose {
+    type Output = [[T; N]; M];
+    fn out_of(&self, m: [[T; M]; N]) -> Self::Output {
+        let mut t: [[T; N]; M] = ::core::array::from_fn(|_|
             ::core::array::from_fn(|_| 
                 T::default()
             )
         );
-        
-        for (i, row) in m.into_iter().enumerate() {
-            for (j, elem) in row.into_iter().enumerate() {
+
+        for (i, row) in IntoIterator::into_iter(m).enumerate() {
+            for (j, elem) in IntoIterator::into_iter(row).enumerate() {
                 *t.get_mut(j, i).unwrap() = elem;
             }
         }

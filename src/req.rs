@@ -57,7 +57,9 @@ pub trait MatrixExtFromIter<A> {
 ///     [4, 12, -1]
 /// ];
 ///
-/// m.in_place(SortBy(|a, b| a < b));
+/// let sort = SortBy(|a, b| a < b);
+///
+/// m.in_place(sort);
 /// 
 /// assert_eq!(m, [
 ///     [-1,  1,  4],

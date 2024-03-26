@@ -41,18 +41,9 @@ impl<'a, M: MatrixExt, S: AccessStrategy<M>> Access<'a, M, S> {
         Self { matrix, strategy }
     }
     
-    pub fn clone_into2(&self) -> M 
+    pub fn clone_into(&self) -> M
     where M: for<'b> MatrixExtFromIter<&'b M::Element> {
         MatrixExtFromIter::from_iter(self.iter(), self.num_cols())
-    }
-}
-impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> Access<'a, M, S> {    
-    pub fn clone_into(&self) -> M 
-    where 
-        M: Clone,
-        <M as MatrixExt>::Element: Clone
-    {
-        self.matrix.clone()
     }
 }
 
@@ -60,9 +51,9 @@ impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> AccessMut<'a, M, S> {
     pub(crate) fn new(matrix: &'a mut M, strategy: S) -> Self {
         Self { matrix, strategy }
     }
-        
-    pub fn clone_into(&self) -> M 
-    where 
+
+    pub fn clone_into(&self) -> M
+    where
         M: Clone,
         <M as MatrixExt>::Element: Clone
     {
