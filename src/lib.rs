@@ -7,9 +7,6 @@
 //! # Features
 //! * **impls** (default): Enables implementation of `MatrixExt` and `MatrixMutExt` for the standard 2D array `[[T; N]; M]`.
 //!
-//! TODO:
-//! * Rethink of `Submatrix` and `Reshape` strategies.
-//!
 //! [`Row Major Order`]: https://en.m.wikipedia.org/wiki/Row-_and_column-major_order
 
 pub mod access;

@@ -97,8 +97,6 @@
  
 * Removed `edition="2021"` inside `Cargo.toml`. 
 
-* Crate is now compatible with the rust editions: 2015, 2018 and 2021.
-
 
 # Version 0.6.0 (April 7, 2024)
 
