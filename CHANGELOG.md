@@ -37,7 +37,7 @@
 
 ## 🚨 **BREAKING CHANGES**
 
-* Removed method `into_iter` and changed clause `Into<Vec<Self::Elem************ent>>` into `Sized + IntoIterator<Self::Element>` on methods `into_rows`, `into_cols` and `into_diags`.
+* Removed method `into_iter` and changed clause `Into<Vec<Self::Element>>` into `Sized + IntoIterator<Self::Element>` on methods `into_rows`, `into_cols` and `into_diags`.
 
 * Added clause `<I as IntoIterator>::IntoIter: ExactSizeIterator` inside `from_iter` method from `MatrixExtFromIter` trait.
 
@@ -98,3 +98,24 @@
 * Removed `edition="2021"` inside `Cargo.toml`. 
 
 * Crate is now compatible with the rust editions: 2015, 2018 and 2021.
+
+
+# Version 0.6.0 (April 7, 2024)
+
+## 🚨 **BREAKING CHANGES**
+
+* Deprecated method name `dimensions` in favor of `shape` (hope this make things more concise).
+
+* Added methods `swap_cols` and `swap_rows` on `MatrixMutExt` trait.
+
+* Field `strategy` from struct `AccessMut` is now public.
+
+* Renamed `SubMatrix` to `Submatrix`.
+
+* Changed `PartialEq<Iterator<MatrixA>> for Iterator<MatrixA>` to `PartialEq<Iterator<MatrixA>> for Iterator<MatrixB>` for each 1D Iterator (Row, Column, Diag, Iter, and their -Mut versions).
+
+* Added `Reshape`,  a new `AccessStrategy`. Panics if dimensions provided does not fit the number of elements of the matrix.
+
+* Updated `Submatrix`: An end-bound Range index is now brought back to the index bound (cols - 1 or rows - 1) if it has a greater or equal value. 
+
+* `edition="2021"` is back inside `Cargo.toml` ... 

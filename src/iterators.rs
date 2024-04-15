@@ -154,11 +154,13 @@ macro_rules! iter {
                 $nextbackimpl
             }
             
-            impl<'a, M: $matrixTrait> PartialEq for $name<'a, M>
+            impl<'a, 'b, M, M2> PartialEq<$name<'b, M2>> for $name<'a, M>
             where
-                M::Element: PartialEq
+                M: $matrixTrait,
+                M2: $matrixTrait,
+                M::Element: PartialEq<M2::Element>
             {
-                fn eq(&self, other: &Self) -> bool {
+                fn eq(&self, other: & $name<'b, M2>) -> bool {
                     let len = self.len();
                     if len != other.len() { 
                         return false
@@ -306,93 +308,6 @@ iter!{
     }
 }
 
-iter!{
-    #[doc = 
-    "An iterator over a matrix column.\n\n\
-    This struct is created by the [`col`](MatrixExt::col) method on [`MatrixExt`]."]
-    Column {/*no mut */} { const } MatrixExt get_nth icol,
-    #[doc = 
-    "An iterator over a mutable matrix column.\n\n\
-    This struct is created by the [`col_mut`](MatrixMutExt::col_mut) method on [`MatrixMutExt`]."]
-    ColumnMut { mut } { mut} MatrixMutExt get_nth_mut icol;
-    |m: &M, col| {
-        let (rows, cols) = m.dimensions();
-        (col, (rows * cols) - cols.saturating_sub(col))
-    } ;
-    fn increment(&self, i: usize) -> usize {  
-        i + self.matrix().row_len()
-    } ; 
-    fn len(&self) -> usize { self.matrix().col_len()  } ;
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.i > self.irev {
-            return None
-        }
-        let j = self.irev;
-        self.irev -= self.use_matrix().row_len();
-        
-        // SAFETY: Nothing else points to or will point to the contents of this iterator.
-        self.get_nth(j)
-    }
-}
-
-iter!{
-    #[doc =
-    "An iterator over a matrix diagonal.\n\n\
-    This struct is created by the [`diag`](MatrixExt::diag) method on [`MatrixExt`]."]
-    Diag {/*no mut */} { const } MatrixExt get_nth n,
-    #[doc =
-    "An iterator over a mutable matrix diagonal.\n\n\
-    This struct is created by the [`diag_mut`](MatrixMutExt::diag_mut) method on [`MatrixMutExt`]."]
-    DiagMut { mut } { mut } MatrixMutExt get_nth_mut n;
-    |m: &M, mut n| {
-        let (rows, cols) = match m.dimensions() {
-            (_, 0) | (0, _) => return (0, 1),
-            (rows, cols) => (rows, cols)
-        } ;
-        let diag_len = m.diag_len(n);
-        let main_diag = rows - 1;
-        if n < main_diag {
-            n = main_diag - n;
-            (
-                n * cols,
-                n + cols * (diag_len + 1), 
-            )
-        } else {
-            n = n - main_diag;
-            (
-                n,
-                n + cols * (diag_len + 1), 
-            )
-        }
-    } ;
-    fn increment(&self, i: usize) -> usize {
-        let m = self.matrix();
-        let (mut i, mut j) = m.subscripts_from(i);
-        i += 1;
-        j += 1;
-        
-        if m.check(i, j) {
-            m.index_from((i, j))
-        }
-        else {
-            // Stop a further call to `next` method by passing value that ends iteration
-            //(iteration goes until self.i > self.irev).
-            self.irev + 1
-        }
-    }; 
-    fn len(&self) -> usize {  self.matrix().diag_len(self.i) };
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.i > self.irev {
-            return None
-        }
-        let j = self.irev;
-        self.irev -= self.use_matrix().row_len() + 1; 
-        
-        // SAFETY: Nothing else points to or will point to the contents of this iterator.
-        self.get_nth(j)
-    }
-}
-
 macro_rules! dimensional_iterator {
     (   $w:ident,
         $ptr:ident,
@@ -402,7 +317,7 @@ macro_rules! dimensional_iterator {
         $callfn:ident,
         $lenfn:ident
     ) => {
-    
+
         #[derive(Debug)]
         pub struct $w<'a, M>
         where M: $matrixTrait,
@@ -412,7 +327,7 @@ macro_rules! dimensional_iterator {
             _marker: PhantomData<&'a M>
         }
 
-        impl<'a, M> Iterator for $w<'a, M> 
+        impl<'a, M> Iterator for $w<'a, M>
         where
             M: $matrixTrait,
             M::Element: 'a
@@ -429,7 +344,7 @@ macro_rules! dimensional_iterator {
             }
         }
 
-        impl<'a, M> DoubleEndedIterator for $w<'a, M> 
+        impl<'a, M> DoubleEndedIterator for $w<'a, M>
         where M: $matrixTrait,
         {
             fn next_back(&mut self) -> Option<Self::Item> {
@@ -459,10 +374,10 @@ macro_rules! dimensional_iterator {
             }
         }
 
-        impl<'a, M> FusedIterator for $w<'a, M> 
+        impl<'a, M> FusedIterator for $w<'a, M>
         where M: $matrixTrait
         {  }
-        
+
         impl<'a, M> ExactSizeIterator for $w<'a, M>
         where M: $matrixTrait {
             fn len(&self) -> usize {
@@ -472,25 +387,141 @@ macro_rules! dimensional_iterator {
         }
 
         impl<'a, 'b, M> From<&'b $($mut)? M> for $w<'a, M>
-        where 
+        where
             'b: 'a,
             M: $matrixTrait
         {
-            fn from(source: &'b $($mut)? M) -> Self { 
-                Self { 
+            fn from(source: &'b $($mut)? M) -> Self {
+                Self {
                     n: 0,
                     m: source,
                     _marker: PhantomData
-                } 
+                }
             }
         }
-            
+
+        // impl<'a, M> $w<'a, M>
+        // where
+        //     M: $matrixTrait,
+        // {
+        //     pub fn equals<'b, M2>(self, other: $w<'b, M2>) -> bool
+        //     where
+        //         M2: $matrixTrait,
+        //         M::Element: PartialEq<M2::Element>
+        //     {
+        //         if self.len() != other.len() {
+        //             return false
+        //         }
+        //         while let Some(row) = self.next() {
+        //             if let Some(other_row) = other.next() {
+        //                 for _ in 0..row.len() {
+        //                     if row.next(). != other_row.next() {
+        //                         return false
+        //                     }
+        //                 }
+        //             }
+        //             else {
+        //                 return false
+        //             }
+        //         }
+        //
+        //         true
+        //     }
+        // }
+
         unsafe impl<'a, M: $matrixTrait> Send for $w<'a, M>
         where M: Send, M::Element: Send {}
-        
+
         unsafe impl<'a, M: $matrixTrait> Sync for $w<'a, M>
         where M: Sync, M::Element: Sync {}
     };
+}
+
+iter!{
+    #[doc =
+    "An iterator over a matrix column.\n\n\
+    This struct is created by the [`col`](MatrixExt::col) method on [`MatrixExt`]."]
+    Column {/*no mut */} { const } MatrixExt get_nth icol,
+    #[doc =
+    "An iterator over a mutable matrix column.\n\n\
+    This struct is created by the [`col_mut`](MatrixMutExt::col_mut) method on [`MatrixMutExt`]."]
+    ColumnMut { mut } { mut} MatrixMutExt get_nth_mut icol;
+    |m: &M, col| {
+        let (rows, cols) = m.shape();
+        (col, (rows * cols) - cols.saturating_sub(col))
+    } ;
+    fn increment(&self, i: usize) -> usize {
+        i + self.matrix().row_len()
+    } ;
+    fn len(&self) -> usize { self.matrix().col_len()  } ;
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.i > self.irev {
+            return None
+        }
+        let j = self.irev;
+        self.irev -= self.use_matrix().row_len();
+
+        // SAFETY: Nothing else points to or will point to the contents of this iterator.
+        self.get_nth(j)
+    }
+}
+
+iter!{
+    #[doc =
+    "An iterator over a matrix diagonal.\n\n\
+    This struct is created by the [`diag`](MatrixExt::diag) method on [`MatrixExt`]."]
+    Diag {/*no mut */} { const } MatrixExt get_nth n,
+    #[doc =
+    "An iterator over a mutable matrix diagonal.\n\n\
+    This struct is created by the [`diag_mut`](MatrixMutExt::diag_mut) method on [`MatrixMutExt`]."]
+    DiagMut { mut } { mut } MatrixMutExt get_nth_mut n;
+    |m: &M, mut n| {
+        let (rows, cols) = match m.shape() {
+            (_, 0) | (0, _) => return (0, 1),
+            (rows, cols) => (rows, cols)
+        } ;
+        let diag_len = m.diag_len(n);
+        let main_diag = rows - 1;
+        if n < main_diag {
+            n = main_diag - n;
+            (
+                n * cols,
+                n + cols * (diag_len + 1),
+            )
+        } else {
+            n = n - main_diag;
+            (
+                n,
+                n + cols * (diag_len + 1),
+            )
+        }
+    } ;
+    fn increment(&self, i: usize) -> usize {
+        let m = self.matrix();
+        let (mut i, mut j) = m.subscripts_from(i);
+        i += 1;
+        j += 1;
+
+        if m.check(i, j) {
+            m.index_from((i, j))
+        }
+        else {
+            // Stop a further call to `next` method by passing value that ends iteration
+            //(iteration goes until self.i > self.irev).
+            self.irev + 1
+        }
+    };
+    fn len(&self) -> usize {  self.matrix().diag_len(self.i) };
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.i > self.irev {
+            return None
+        }
+        let j = self.irev;
+        self.irev -= self.use_matrix().row_len() + 1;
+
+        // SAFETY: Nothing else points to or will point to the contents of this iterator.
+        self.get_nth(j)
+    }
 }
 
 
@@ -598,7 +629,7 @@ impl<T> IntoAxes<T>
     where M: IntoIterator,
     <M as IntoIterator>::Item: IntoIterator<Item = T>
     {
-        let (num_rows, num_cols) = src.dimensions();
+        let (num_rows, num_cols) = src.shape();
         let mut v = Vec::with_capacity(num_cols);
         for _ in 0..num_cols {
             v.push(Vec::with_capacity(num_rows));

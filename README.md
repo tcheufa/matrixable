@@ -1,5 +1,5 @@
 # matrixable
-A crate providing utilities for matrix manipulation.
+This crate provides utilities for matrix manipulation.
 
 ## Example 
 ```rust
@@ -10,10 +10,13 @@ struct IdentityMatrix { dim_size: usize }
 impl MatrixExt for IdentityMatrix {
     type Element = i32;
 
+    #[inline]
     fn num_rows(&self) -> usize { self.dim_size }
 
+    #[inline]
     fn num_cols(&self) -> usize { self.dim_size }
 
+    #[inline]
     fn get(&self, i: usize, j: usize) -> Option<&Self::Element> {
         if i >= self.dim_size || j >= self.dim_size {
             None
@@ -86,28 +89,27 @@ This trait requires three methods to be implemented:
 
 * `num_rows`: which should give the number of rows of the matrix.
 * `num_cols`: which should give the the number of columns.
-* `get`: which may return a reference to an element of the matrix.
+* `get`: which returns a reference to an element of the matrix if found.
 
-Once these methods are implemented, the following features automatically become available:
+Once these methods are implemented, the following features are provided:
 
 * **immutability**: All the functions provided by this trait does not modify elements of the matrix-like struct unless that struct is consumed in the process.
 * **iterators**: Iterate over all elements and also over rows, columns and diagonals.
-* **access**: Access elements differently without changing their positions: transpose access, rotate access, sub-matrix... 
+* **access**: Access elements differently without changing their positions: transpose access, rotate access, reshape, sub-matrix... 
 * **transformation**: Transform struct into another type, maybe another matrix.
 * **metadata**: Get information about the matrix: symmetry, dimensions, diagonality...
 
 
 ## MatrixMutExt
 
-This trait requires for the struct to first implement `MatrixExt` as well as its single required method: `get_mut`.
+This trait requires for the struct to first implement `MatrixExt`, and then the trait required method: `get_mut`.
 
 Once implemented `MatrixMutExt` structs inherits features from `MatrixExt` plus the following:
 
 * **mutability**: Functions provided by this trait allow elements to be mutated. Mutable versions of the above features also become available (iterators, access).
+* **swap**: Swap elements, rows or columns. 
 * **in-place modification**.
 
-
-[dependencies]
 ## Important
 * Note also that this crate extends the standard 2D array `[[T; N]; M]`, now available through the `impls` default feature.
   The default features can be disabled by setting `default-features` parameter to `false` as follows:
@@ -115,13 +117,12 @@ Once implemented `MatrixMutExt` structs inherits features from `MatrixExt` plus 
     matrixable = { version = "0.5.0", default-features = false }
     ```
 * This crate support `no_std` environments since ver`0.3.0`.
-* Many improvements and changes have been done since the beginning of this project. Please see to the [`CHANGELOG`](CHANGELOG.md) for more details.
-* Your help and suggestions on improving this crate are highly encouraged. So please feel comfortable to report any issue you may encounter!
+* Many improvements and changes (breaking changes as well) have been done since the beginning of this project. Please see the [`CHANGELOG`](CHANGELOG.md) for more details.
+* Your help and suggestions on improving this crate are highly encouraged. So please feel free to report any issue you may encounter!
 
 
 ## More
-See the [**documentation**](https://docs.rs/matrixable/0.1.0/matrixable/)  for additional information on the library.
-
+More information about the library in the [**documentation**](https://docs.rs/matrixable/0.1.0/matrixable/).
 
 ## License
 

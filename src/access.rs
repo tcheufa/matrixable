@@ -23,7 +23,7 @@ pub struct Access<'a, M: MatrixExt, S: AccessStrategy<M>>{
 #[derive(Hash, Debug)]
 pub struct AccessMut<'a, M: MatrixExt, S: AccessStrategy<M>>{
     matrix: &'a mut M,
-    strategy: S,
+    pub strategy: S,
 }
 
 /// Used by [`AccessStrategySet`].
@@ -40,7 +40,7 @@ impl<'a, M: MatrixExt, S: AccessStrategy<M>> Access<'a, M, S> {
     pub(crate) fn new(matrix: &'a M, strategy: S) -> Self {
         Self { matrix, strategy }
     }
-    
+
     pub fn clone_into(&self) -> M
     where M: for<'b> MatrixExtFromIter<&'b M::Element> {
         MatrixExtFromIter::from_iter(self.iter(), self.num_cols())
@@ -62,13 +62,15 @@ impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> AccessMut<'a, M, S> {
 }
 
 impl Observer {
+    #[inline]
     pub fn new(dimensions: (usize, usize)) -> Self {
         Self {
             rows: dimensions.0,
             cols: dimensions.1
         }
     }
-    
+
+    #[inline]
     pub fn update_dimensions(&mut self, s: &dyn AccessStrategy<Self>) {
         self.rows = s.nrows(&self);
         self.cols = s.ncols(&self);
@@ -81,10 +83,12 @@ impl Observer {
 
 impl MatrixExt for Observer {
     type Element = ();
-    
-    fn num_rows(&self) -> usize { self.rows }
-    fn num_cols(&self) -> usize { self.cols }
-    fn get(&self, i: usize, j: usize) -> Option<&()> { 
+
+    #[inline(always)] fn num_rows(&self) -> usize { self.rows }
+    #[inline(always)] fn num_cols(&self) -> usize { self.cols }
+
+    #[inline(always)]
+    fn get(&self, i: usize, j: usize) -> Option<&()> {
         if self.check(i, j) {
             return Some(&())
         } 
@@ -94,27 +98,29 @@ impl MatrixExt for Observer {
 
 impl<'a, M: MatrixExt, S: AccessStrategy<M>> MatrixExt for Access<'a, M, S> {
     type Element = <M as MatrixExt>::Element;
-    
-    fn num_rows(&self) -> usize { self.strategy.nrows(&self.matrix) }
-    fn num_cols(&self) -> usize { self.strategy.ncols(&self.matrix) }
+    #[inline] fn num_rows(&self) -> usize { self.strategy.nrows(&self.matrix) }
+    #[inline] fn num_cols(&self) -> usize { self.strategy.ncols(&self.matrix) }
 
-    fn get(&self, row: usize, column: usize) -> Option<&Self::Element> { 
+    #[inline]
+    fn get(&self, row: usize, column: usize) -> Option<&Self::Element> {
         let (i, j) = self.strategy.access(&self.matrix, row, column)?;
         self.matrix.get(i, j)
     }
 }
 impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> MatrixExt for AccessMut<'a, M, S> {
     type Element = M::Element;
-    
-    fn num_rows(&self) -> usize { self.strategy.nrows(&self.matrix) }
-    fn num_cols(&self) -> usize { self.strategy.ncols(&self.matrix) }
 
+    #[inline] fn num_rows(&self) -> usize { self.strategy.nrows(&self.matrix) }
+    #[inline] fn num_cols(&self) -> usize { self.strategy.ncols(&self.matrix) }
+
+    #[inline]
     fn get(&self, row: usize, column: usize) -> Option<&Self::Element> { 
         let (i, j) = self.strategy.access(&self.matrix, row, column)?;
         self.matrix.get(i, j) 
     }
 }
 impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> MatrixMutExt for AccessMut<'a, M, S> {
+    #[inline]
     fn get_mut(&mut self, row: usize, column: usize) -> Option<&mut Self::Element> { 
         let (i, j) = self.strategy.access(&self.matrix, row, column)?;
         self.matrix.get_mut(i, j) 
