@@ -7,6 +7,9 @@
 //! # Features
 //! * **impls** (default): Enables implementation of `MatrixExt` and `MatrixMutExt` for the standard 2D array `[[T; N]; M]`.
 //!
+//! TODO:
+//! * Rethink of `Submatrix` and `Reshape` strategies.
+//!
 //! [`Row Major Order`]: https://en.m.wikipedia.org/wiki/Row-_and_column-major_order
 
 pub mod access;
@@ -165,16 +168,16 @@ pub trait MatrixExt
     fn first(&self) -> Option<&Self::Element> {
         self.get(0, 0)
     }
-    
+
     #[inline]
     /// Returns the last element of the  matrix, or `None` if it is empty.
     fn last(&self) -> Option<&Self::Element> {
-        match self.dimensions() {
+        match self.shape() {
             (0, _) | (_, 0) => None,
             (r, c) => self.get(r - 1, c - 1)
         }
     }
-    
+
     /// Returns a reference to an element given its linear order, without doing bound checking.
     ///
     /// For a safe alternative see [`get_nth`].
@@ -201,18 +204,18 @@ pub trait MatrixExt
         let (i, j) = self.subscripts_from(n);
         self.get_unchecked(i, j)
     }
-    
-    /// Returns the size of the matrix
+
+    /// Returns the number of elements of the matrix
     /// # Example
     /// ```rust
     /// use matrixable::MatrixExt;
-    /// 
+    ///
     /// assert_eq!(5, [[1, 2, 3, 4, 5]].size());
     /// assert_eq!(6, [[1, 2], [3, 4], [5, 6]].size());
     /// ```
     #[inline]
     fn size(&self) -> usize { self.num_rows() * self.num_cols() }
-    
+
     /// Returns the dimensions of the matrix
     ///
     /// # Example
@@ -221,8 +224,13 @@ pub trait MatrixExt
     ///
     /// let m = [[1, 1, 1], [2, 2, 2]];
     ///
-    /// assert_eq!((2, 3), m.dimensions());
+    /// assert_eq!((2, 3), m.shape());
     /// ```
+    #[inline]
+    fn shape(&self) -> (usize, usize) { (self.num_rows(), self.num_cols()) }
+
+
+    #[deprecated(since="0.6.0", note="please use `shape` instead")]
     #[inline]
     fn dimensions(&self) -> (usize, usize) { (self.num_rows(), self.num_cols()) }
 
@@ -279,7 +287,7 @@ pub trait MatrixExt
     /// assert_eq!(0, empty.diag_len(0));
     /// ```
     fn diag_len(&self, mut n: usize) -> usize {
-        let (rows, cols) = self.dimensions();
+        let (rows, cols) = self.shape();
         // num_diags()
         let ndiags = cols.saturating_sub(1) + rows;
         if self.is_empty() || n >= ndiags {
@@ -1083,7 +1091,7 @@ pub trait MatrixExt
     /// ```
     #[inline]
     fn is_singleton(&self) -> bool {
-        self.dimensions() == (1, 1)
+        self.shape() == (1, 1)
     }
     
     
@@ -1405,7 +1413,7 @@ pub trait MatrixMutExt: MatrixExt {
     #[inline]
     /// Returns a mutable pointer to the last element of the  matrix, or `None` if it is empty.
     fn last_mut(&mut self) -> Option<&mut Self::Element> {
-        match self.dimensions() {
+        match self.shape() {
             (0, _) | (_, 0) => None,
             (r, c) => self.get_mut(r - 1, c - 1)
         }
@@ -1545,7 +1553,28 @@ pub trait MatrixMutExt: MatrixExt {
         let b: *mut Self::Element = self.get_nth_mut(b).unwrap();
         unsafe { ::core::mem::swap(&mut *a, &mut *b) };
     }
-    
+
+    /// Swaps two columns.
+    /// # Panics
+    /// Panics if a column index is out of bound.
+    #[inline]
+    fn swap_cols(&mut self, col1: usize, col2: usize) {
+        for i in 0..self.num_rows() {
+            self.swap((i, col1), (i, col2));
+        }
+    }
+
+
+    /// Swaps two rows.
+    /// # Panics
+    /// Panics if a row index is out of bound.
+    #[inline]
+    fn swap_rows(&mut self, row1: usize, row2: usize) {
+        for j in 0..self.num_cols() {
+            self.swap((row1, j), (row2, j));
+        }
+    }
+
     /// Returns an iterator that allows modifying each element.
     ///
     /// Iteration follows the *Row Major Order*.
@@ -1840,4 +1869,5 @@ pub trait MatrixMutExt: MatrixExt {
     where Self: Sized {
         strategy.in_place(self)
     }
+
 }
