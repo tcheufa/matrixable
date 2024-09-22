@@ -467,7 +467,7 @@ pub struct Reshape(pub usize, pub usize);
 pub struct AccessMap<Mapping: MatrixExt>(pub Mapping); 
 
 /// This strategy access elements of this matrix following an ordered set of `AccessStrategy`s.
-/// This set can only strategies implementing `AccessStrategy<Observer>`.
+/// This set can only contain strategies implementing `AccessStrategy<Observer>`.
 ///
 /// # Example
 /// ```rust
@@ -482,29 +482,29 @@ pub struct AccessMap<Mapping: MatrixExt>(pub Mapping);
 ///     Box::new(FlipH)
 /// ];
 ///
-/// let mut t = m.access(strategy);        
+/// let mut s = m.access(strategy);        
 ///
-/// assert_eq!(Some(&3), t.get(0, 0));
-/// assert_eq!(Some(&1), t.get(0, 1));
-/// assert_eq!(Some(&0), t.get(1, 0));
-/// assert_eq!(Some(&2), t.get(1, 1));
+/// assert_eq!(Some(&3), s.get(0, 0));
+/// assert_eq!(Some(&1), s.get(0, 1));
+/// assert_eq!(Some(&0), s.get(1, 0));
+/// assert_eq!(Some(&2), s.get(1, 1));
 ///
 /// // remove `FlipH`
-/// t.strategy.pop(); 
+/// s.strategy.pop(); 
 /// 
 /// // add `Reverse`
 /// use matrixable::strategies::Reverse;
 ///
-/// t.strategy.push(Box::new(Reverse));
+/// s.strategy.push(Box::new(Reverse));
 ///
-/// assert_eq!(Some(&0), t.get(0, 0));
-/// assert_eq!(Some(&2), t.get(0, 1));
-/// assert_eq!(Some(&3), t.get(1, 0));
-/// assert_eq!(Some(&1), t.get(1, 1));
+/// assert_eq!(Some(&0), s.get(0, 0));
+/// assert_eq!(Some(&2), s.get(0, 1));
+/// assert_eq!(Some(&3), s.get(1, 0));
+/// assert_eq!(Some(&1), s.get(1, 1));
 /// ```
 /// <br/>
 ///
-/// You can also access elements mutably, in a more complex way than what a simple chain of [`MatrixMutExt::access_mut`] method can allow.
+/// You can also access elements mutably, in a more advanced way than what a chaining of the [`MatrixMutExt::access_mut`] method can allow.
 ///
 /// # Example
 /// ```rust
@@ -521,7 +521,7 @@ pub struct AccessMap<Mapping: MatrixExt>(pub Mapping);
 /// m.access_mut(&strategy)
 ///  .col_mut(0)
 ///  .unwrap()
-///  .for_each(|x| *x = 11);;        
+///  .for_each(|x| *x = 11);      
 ///
 /// assert_eq!([[1, 2, 11, 4], [5, 6, 11, 8]], m);
 /// 
@@ -701,7 +701,7 @@ impl<Rows: RangeBounds<usize>, Cols: RangeBounds<usize>> Submatrix<Rows, Cols>
             _ => len.saturating_sub(1),
         };
 
-        return RangeInclusive::new(start, end);
+        RangeInclusive::new(start, end)
     }
 }
 

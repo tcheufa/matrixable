@@ -1,6 +1,6 @@
 #![no_std]
 
-//! This library provides traits and structs that will extend the capacities of a matrix-like struct.
+//! This library contains traits that provides matrix behavior to its implementors and also helper structs for ease of use.
 //!
 //! A matrix implementing [`MatrixExt`] is by default in *[`Row Major Order`]*, but you can still change it using transpose access.
 //!
@@ -226,8 +226,8 @@ pub trait MatrixExt
     #[inline]
     fn shape(&self) -> (usize, usize) { (self.num_rows(), self.num_cols()) }
 
-
-    #[deprecated(since="0.6.0", note="please use `shape` instead")]
+    #[deprecated(since="0.6.0", note="please use [`shape`](#method.shape) instead")]    
+    /// Returns the dimensions of the matrix. It is an alias of the [`shape`](#method.shape) method.
     #[inline]
     fn dimensions(&self) -> (usize, usize) { (self.num_rows(), self.num_cols()) }
 
@@ -757,6 +757,91 @@ pub trait MatrixExt
         Diags::from(self) 
     }
 
+    /// Returns an array of elements that are one-cell-adjacent to the hypothetic element located
+    /// at `i`-th row and `j`-th column.
+    /// # Examples
+    /// ```rust
+    /// use matrixable::MatrixExt;
+    /// 
+    /// let m = [
+    ///     [ 0,  1,  2,  3,  4],
+    ///     [ 5,  6,  7,  8,  9],
+    ///     [10, 11, 12, 13, 14],
+    /// ];
+    /// assert_eq!([Some(&1), Some(&2), Some(&3), Some(&6), Some(&8), Some(&11), Some(&12), Some(&13)], m.neighbours(1, 2));
+    /// assert_eq!([None, Some(&0), Some(&1), None, Some(&6), None, Some(&10), Some(&11)], m.neighbours(1, 0));
+    /// assert_eq!([Some(&8), Some(&9), None, Some(&13), None, None, None, None], m.neighbours(2, 4));
+    /// ```
+    /// Neighbouring elements are returned from top left to bottom right
+    /// as shown is the following examples:
+    /// ```plain
+    /// * `@` refers to the element at (i, j)
+    /// * `-` refers to other elements of the matrix that are not be returned by the function
+    /// * Numbers followed by a `?` are out of the matrix. They will be mapped to `None`.
+    ///  
+    /// +---+---+---+---+---+     +---+---+---+---+---+         +---+---+---+---+---+
+    /// | - | - | - | - | - |     | - | - | - | 0 | 1 | 2?      | - | - | - | - | - |  
+    /// +---+---+---+---+---+     +---+---+---+---+---+         +---+---+---+---+---+       
+    /// | - | 0 | 1 | 2 | - |     | - | - | - | 3 | @ | 4?      | - | - | - | - | - |     
+    /// +---+---+---+---+---+     +---+---+---+---+---+         +---+---+---+---+---+       
+    /// | - | 3 | @ | 4 | - |     | - | - | - | 5 | 6 | 7?      | - | - | - | - | - |          
+    /// +---+---+---+---+---+     +---+---+---+---+---+         +---+---+---+---+---+       
+    /// | - | 5 | 6 | 7 | - |     | - | - | - | - | - |         | - | - | - | 0 | 1 | 2?
+    /// +---+---+---+---+---+     +---+---+---+---+---+         +---+---+---+---+---+
+    /// | - | - | - | - | - |     | - | - | - | - | - |         | - | - | - | 3 | @ | 4?
+    /// +---+---+---+---+---+     +---+---+---+---+---+         +---+---+---+---+---+    
+    ///                                                                       5?  6?  7? 
+    /// ```
+    /// # Note
+    /// It is not mandatory for @ to be at a correct position of the matrix.
+    /// This allows some fancy ways of collecting elements at bottom or right.
+    /// 
+    /// ```plain
+    /// +---+---+---+---+---+         +---+---+---+---+---+
+    /// | - | - | - | - | - |         | - | - | - | - | 0 | 1?  2?  
+    /// +---+---+---+---+---+         +---+---+---+---+---+       
+    /// | - | - | - | - | - |         | - | - | - | - | 3 | @   4?
+    /// +---+---+---+---+---+         +---+---+---+---+---+       
+    /// | - | - | - | - | - |         | - | - | - | - | 5 | 6?  7?          
+    /// +---+---+---+---+---+         +---+---+---+---+---+       
+    /// | - | 0 | 1 | 2 | - |         | - | - | - | - | - |
+    /// +---+---+---+---+---+         +---+---+---+---+---+
+    ///       3?  @  4?
+    ///                                       
+    ///       5?  6? 7?
+    /// ```
+    #[inline]
+    fn neighbours(&self, i: usize, j: usize) -> [Option<&Self::Element>; 8] {
+        [
+            if i.checked_sub(1).is_some() && j.checked_sub(1).is_some() {
+                self.get(i-1, j-1)
+            } else { None },
+
+            if i.checked_sub(1).is_some() {
+                self.get(i-1, j)
+            } else { None },
+
+            if i.checked_sub(1).is_some() {
+                self.get(i-1, j+1)
+            } else { None },
+
+            if j.checked_sub(1).is_some() {
+                self.get(i, j-1)
+            } else { None },
+
+            self.get(i, j+1),
+            
+            if j.checked_sub(1).is_some() {
+                self.get(i+1, j-1)
+            } else { None },
+
+            self.get(i+1, j),
+            
+            self.get(i+1, j+1),
+        ]
+    }
+
+
     /// Creates a matrix to access elements of this matrix following an `AccessStrategy`.
     ///
     /// # Example
@@ -891,7 +976,21 @@ pub trait MatrixExt
     {
         strategy.out_of(self)
     }
-    
+
+    /// Returns the subscripts of the first element of the matrix that matches the condition.
+    #[inline]
+    fn position2(&self, f: impl Fn(&Self::Element)->bool) -> Option<(usize, usize)> {
+        for i in 0..self.num_rows() {
+            for j in 0..self.num_cols() {
+                if f(self.get(i, j).unwrap()) {
+                   return Some((i, j))
+                }
+            }
+        }
+
+        None
+    }
+
     /// Checks if the matrix is empty.
     /// ```rust
     /// use matrixable::MatrixExt;
@@ -1064,7 +1163,7 @@ pub trait MatrixExt
         use ::core::ops::Neg;
         self.access(crate::strategies::Transpose).iter()
             .zip(self.iter())
-            .all(|(&ref x, &ref y)| *x == y.neg())
+            .all(|(x, y)| *x == y.neg())
     }
 
     /// Checks if the matrix is a singleton i.e. dimensions are equal to `(1, 1)`.
@@ -1508,7 +1607,7 @@ pub trait MatrixMutExt: MatrixExt {
         if a == b { return }
         let a: *mut Self::Element = self.get_mut(a.0, a.1).unwrap();
         let b: *mut Self::Element = self.get_mut(b.0, b.1).unwrap();
-        unsafe { ::core::mem::swap(&mut *a, &mut *b) };
+        unsafe { ::core::ptr::swap(&mut *a, &mut *b) };
     }
 
     /// Swaps two elements in the matrix identified by their linear position following the *Row Major Order*.
@@ -1548,7 +1647,7 @@ pub trait MatrixMutExt: MatrixExt {
         if a == b { return }
         let a: *mut Self::Element = self.get_nth_mut(a).unwrap();
         let b: *mut Self::Element = self.get_nth_mut(b).unwrap();
-        unsafe { ::core::mem::swap(&mut *a, &mut *b) };
+        unsafe { ::core::ptr::swap(&mut *a, &mut *b) };
     }
 
     /// Swaps two columns.

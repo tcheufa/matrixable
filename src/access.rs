@@ -72,8 +72,8 @@ impl Observer {
 
     #[inline]
     pub fn update_dimensions(&mut self, s: &dyn AccessStrategy<Self>) {
-        self.rows = s.nrows(&self);
-        self.cols = s.ncols(&self);
+        self.rows = s.nrows(self);
+        self.cols = s.ncols(self);
     }
 }
 
@@ -98,31 +98,31 @@ impl MatrixExt for Observer {
 
 impl<'a, M: MatrixExt, S: AccessStrategy<M>> MatrixExt for Access<'a, M, S> {
     type Element = <M as MatrixExt>::Element;
-    #[inline] fn num_rows(&self) -> usize { self.strategy.nrows(&self.matrix) }
-    #[inline] fn num_cols(&self) -> usize { self.strategy.ncols(&self.matrix) }
+    #[inline] fn num_rows(&self) -> usize { self.strategy.nrows(self.matrix) }
+    #[inline] fn num_cols(&self) -> usize { self.strategy.ncols(self.matrix) }
 
     #[inline]
     fn get(&self, row: usize, column: usize) -> Option<&Self::Element> {
-        let (i, j) = self.strategy.access(&self.matrix, row, column)?;
+        let (i, j) = self.strategy.access(self.matrix, row, column)?;
         self.matrix.get(i, j)
     }
 }
 impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> MatrixExt for AccessMut<'a, M, S> {
     type Element = M::Element;
 
-    #[inline] fn num_rows(&self) -> usize { self.strategy.nrows(&self.matrix) }
-    #[inline] fn num_cols(&self) -> usize { self.strategy.ncols(&self.matrix) }
+    #[inline] fn num_rows(&self) -> usize { self.strategy.nrows(self.matrix) }
+    #[inline] fn num_cols(&self) -> usize { self.strategy.ncols(self.matrix) }
 
     #[inline]
     fn get(&self, row: usize, column: usize) -> Option<&Self::Element> { 
-        let (i, j) = self.strategy.access(&self.matrix, row, column)?;
+        let (i, j) = self.strategy.access(self.matrix, row, column)?;
         self.matrix.get(i, j) 
     }
 }
 impl<'a, M: MatrixMutExt, S: AccessStrategy<M>> MatrixMutExt for AccessMut<'a, M, S> {
     #[inline]
     fn get_mut(&mut self, row: usize, column: usize) -> Option<&mut Self::Element> { 
-        let (i, j) = self.strategy.access(&self.matrix, row, column)?;
+        let (i, j) = self.strategy.access(self.matrix, row, column)?;
         self.matrix.get_mut(i, j) 
     }
 }

@@ -613,9 +613,8 @@ pub struct IntoAxes<T> {
 }
 impl<T> IntoAxes<T>
 {
-    pub fn from_as_rows<M: MatrixExt>(src: M) -> Self
-    where M: IntoIterator,
-    <M as IntoIterator>::Item: IntoIterator<Item = T>
+    pub fn from_as_rows<M: MatrixExt + IntoIterator>(src: M) -> Self
+    where <M as IntoIterator>::Item: IntoIterator<Item = T>
     {
         let mut v = Vec::with_capacity(src.num_rows());
         for row in src {
@@ -625,9 +624,8 @@ impl<T> IntoAxes<T>
         Self { axes: v.into_iter() }
     }
 
-    pub fn from_as_cols<M: MatrixExt>(src: M) -> Self
-    where M: IntoIterator,
-    <M as IntoIterator>::Item: IntoIterator<Item = T>
+    pub fn from_as_cols<M: MatrixExt + IntoIterator>(src: M) -> Self
+    where <M as IntoIterator>::Item: IntoIterator<Item = T>
     {
         let (num_rows, num_cols) = src.shape();
         let mut v = Vec::with_capacity(num_cols);
@@ -642,9 +640,8 @@ impl<T> IntoAxes<T>
         Self { axes: v.into_iter() }
     }
 
-    pub fn from_as_diags<M: MatrixExt>(src: M) -> Self
-        where M: IntoIterator,
-              <M as IntoIterator>::Item: IntoIterator<Item = T>
+    pub fn from_as_diags<M: MatrixExt + IntoIterator>(src: M) -> Self
+        where <M as IntoIterator>::Item: IntoIterator<Item = T>
     {
         if src.is_empty () {
             return Self {
